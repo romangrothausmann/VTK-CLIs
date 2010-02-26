@@ -17,7 +17,7 @@ ENDIF()
 IF(DEFINED CMAKE_INSTALL_PREFIX)
    SET(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE STRING "Choose the install directory.")
 ELSE()
-   SET(CMAKE_INSTALL_PREFIX /opt/vtk-simple/ CACHE STRING "Choose the install directory.")
+   SET(CMAKE_INSTALL_PREFIX /opt/VTK-CLIs/ CACHE STRING "Choose the install directory.")
 ENDIF()
 
 # IF(DEFINED ITK_DIR)
@@ -37,7 +37,7 @@ ENDIF()
 
 
 
-PROJECT(simple_VTK_programs)
+PROJECT(VTK-CLIs)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 
@@ -64,6 +64,12 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 
 SET(CurrentExe "discrete_marching-cubes")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "lego_surf")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
