@@ -100,31 +100,17 @@ int main (int argc, char *argv[]){
     scalarsOff->SetInputConnection(transformModel->GetOutputPort());
     scalarsOff->CopyAttributeOff(vtkMaskFields::POINT_DATA,
         vtkDataSetAttributes::SCALARS);
-    scalarsOff->CopyAttributeOff(vtkMaskFields::CELL_DATA,
-        vtkDataSetAttributes::SCALARS);
 
     geometry->SetInputConnection(scalarsOff->GetOutputPort());
 
+    selector->ThresholdBetween(startLabel, endLabel);
     writer->SetInputConnection(geometry->GetOutputPort());
 
-    for (unsigned int i = startLabel; i <= endLabel; i++){
-        // see if the label exists, if not skip it
-        double frequency =
-            histogram->GetOutput()->GetPointData()->GetScalars()->GetTuple1(i);
-        if (frequency == 0.0)
-            continue;
+    vtksys_stl::stringstream ss;
+    ss << filePrefix << ".vtp";
 
-        // select the cells for a given label
-        selector->ThresholdBetween(i, i);
+    writer->SetFileName(ss.str().c_str());
+    writer->Write();
 
-        // output the polydata
-        vtksys_stl::stringstream ss;
-        ss << filePrefix << i << ".vtp";
-        cout << argv[0] << " writing " << ss.str() << endl;
-
-        writer->SetFileName(ss.str().c_str());
-        writer->Write();
-
-        }
     return EXIT_SUCCESS;
     }
