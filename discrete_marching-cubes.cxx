@@ -43,8 +43,13 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
  
-    if (argc != 5){
-	std::cerr << "Usage: " << argv[0] << " input output  StartLabel EndLabel" << std::endl;
+    if (argc != 6){
+	std::cerr << "Usage: " << argv[0]
+		  << " input"
+		  << " output"
+		  << " StartLabel EndLabel"
+		  << " cap-surface"
+		  << std::endl;
 	return EXIT_FAILURE;
 	}
 
@@ -76,22 +81,25 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    int *extent = reader->GetOutput()->GetExtent();
-    pad->SetInputData(reader->GetOutput());
-    pad->SetOutputWholeExtent(
-        extent[0] -1, extent[1] + 1,
-        extent[2] -1, extent[3] + 1,
-        extent[4] -1, extent[5] + 1);
-    pad->Update();
+    if(atoi(argv[5])){
+	int *extent = reader->GetOutput()->GetExtent();
+	pad->SetInputConnection(reader->GetOutputPort());
+	pad->SetOutputWholeExtent(
+	    extent[0] -1, extent[1] + 1,
+	    extent[2] -1, extent[3] + 1,
+	    extent[4] -1, extent[5] + 1);
+	pad->Update();
+	discreteCubes->SetInputConnection(pad->GetOutputPort());
+	}
+    else
+	discreteCubes->SetInputConnection(reader->GetOutputPort());
 
-
-    discreteCubes->SetInputConnection(pad->GetOutputPort());
     discreteCubes->GenerateValues(
 	endLabel - startLabel + 1, startLabel, endLabel);
     discreteCubes->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     discreteCubes->Update();
 
-    writer->SetInputData(discreteCubes->GetOutput());
+    writer->SetInputConnection(discreteCubes->GetOutputPort());
 
     vtksys_stl::stringstream ss2;
     ss2 << filePrefix << "_raw.vtp";
