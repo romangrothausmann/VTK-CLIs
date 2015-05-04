@@ -4,26 +4,17 @@
 
 
 
+#include <vtkSmartPointer.h>
 #include <vtkMetaImageReader.h>
-#include <vtkImageAccumulate.h>
+#include <vtkImageData.h>//for GetExtent()
+#include <vtkImageConstantPad.h>
 #include <vtkDiscreteMarchingCubes.h>
 #include <vtkWindowedSincPolyDataFilter.h>
-#include <vtkThreshold.h>
-#include <vtkGeometryFilter.h>
 #include <vtkXMLPolyDataWriter.h>
-#include <vtkSmartPointer.h>
-#include <vtkImageConstantPad.h>
-#include <vtkMetaImageWriter.h>
 #include <vtkFeatureEdges.h>
-#include <vtkAppendPolyData.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
-
-#include <vtkImageData.h>
-#include <vtkPointData.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtksys/ios/sstream>
 
 
 void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* clientData, void* callData){
@@ -82,7 +73,7 @@ int main (int argc, char *argv[]){
     reader->Update();
 
     if(atoi(argv[5])){
-	int *extent = reader->GetOutput()->GetExtent();
+	int *extent = reader->GetOutput()->GetExtent(); //needs vtkImageData.h
 	pad->SetInputConnection(reader->GetOutputPort());
 	pad->SetOutputWholeExtent(
 	    extent[0] -1, extent[1] + 1,
@@ -108,6 +99,20 @@ int main (int argc, char *argv[]){
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     writer->Write();
 
+
+    smoother->SetInputConnection(discreteCubes->GetOutputPort());
+    smoother->SetNumberOfIterations(smoothingIterations);
+    smoother->NonManifoldSmoothingOn();
+    smoother->NormalizeCoordinatesOn();
+    smoother->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    smoother->Update();
+
+    vtksys_stl::stringstream ss;
+    ss << filePrefix << "_sws.vtp";
+
+    writer->SetInputConnection(smoother->GetOutputPort());
+    writer->SetFileName(ss.str().c_str());
+    writer->Write();
 
 
     ///check if surface is closed
@@ -136,20 +141,6 @@ int main (int argc, char *argv[]){
         std::cout << "Surface has non-manifold edges. # of non-manifold edges: " << numberOfEdges << std::endl;
     else
         std::cout << "Surface has only manifold edges. # of non-manifold edges: " << numberOfEdges << std::endl;
-
-    smoother->SetInputConnection(discreteCubes->GetOutputPort());
-    smoother->SetNumberOfIterations(smoothingIterations);
-    smoother->NonManifoldSmoothingOn();
-    smoother->NormalizeCoordinatesOn();
-    smoother->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    smoother->Update();
-
-    vtksys_stl::stringstream ss;
-    ss << filePrefix << "_sws.vtp";
-
-    writer->SetInputConnection(smoother->GetOutputPort());
-    writer->SetFileName(ss.str().c_str());
-    writer->Write();
 
     return EXIT_SUCCESS;
     }
