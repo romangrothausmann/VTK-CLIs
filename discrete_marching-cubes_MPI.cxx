@@ -3,7 +3,6 @@
 
 
 
-#include <mpi.h>
 #include <vtkMPIController.h>
 #include <vtkStreamingDemandDrivenPipeline.h>
 
@@ -143,16 +142,9 @@ int main (int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
-    // This is here to avoid false leak messages from vtkDebugLeaks when
-    // using mpich. It appears that the root process which spawns all the
-    // main processes waits in MPI_Init() and calls exit() when
-    // the others are done, causing apparent memory leaks for any objects
-    // created before MPI_Init().
-    MPI_Init(&argc, &argv);
-
     vtkSmartPointer<vtkMPIController> controller =
 	vtkSmartPointer<vtkMPIController>::New();
-    controller->Initialize(&argc, &argv, 1);
+    controller->Initialize(&argc, &argv); //, 1); //without error handler / external initialization no MPI_Init needed
 
     ParallelArgs args;
     args.argc = argc;
