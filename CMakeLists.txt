@@ -51,6 +51,25 @@ IF ( VTK_FOUND )
       INCLUDE( ${USE_VTK_FILE} )
 ENDIF( VTK_FOUND )
 
+if (TARGET vtkParallelMPI)
+  set(VTK_USE_MPI TRUE)
+endif()
+
+IF (NOT VTK_USE_MPI)
+  MESSAGE(STATUS
+    "VTK was not compiled with MPI enabled.\n"
+    "Please recompile VTK with VTK_Group_MPI cmake variables turned on.")
+ELSE (NOT VTK_USE_MPI)
+  MESSAGE(STATUS "MPI Enabled in VTK.")
+
+  FIND_PACKAGE (MPI)
+
+  # if not found specify:
+  # MPI_EXTRA_LIBRARY                /usr/lib/libmpi_cxx.so
+  # MPI_LIBRARY                      /usr/lib/libmpi.so
+ENDIF (NOT VTK_USE_MPI)
+
+
 INCLUDE_DIRECTORIES(
   # $ENV{HOME}/vtk/
   )
@@ -72,5 +91,5 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 SET(CurrentExe "discrete_marching-cubes_MPI")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY} )
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
