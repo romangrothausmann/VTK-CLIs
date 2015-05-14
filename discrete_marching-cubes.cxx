@@ -90,13 +90,13 @@ int main (int argc, char *argv[]){
     discreteCubes->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     discreteCubes->Update();
 
-    writer->SetInputConnection(discreteCubes->GetOutputPort());
+    writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     vtksys_stl::stringstream ss2;
     ss2 << filePrefix << "_raw.vtp";
 
+    writer->SetInputConnection(discreteCubes->GetOutputPort());
     writer->SetFileName(ss2.str().c_str());
-    writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     writer->Write();
 
 

@@ -81,6 +81,7 @@ int main (int argc, char *argv[]){
     unsigned int smoothingIterations = 20;
 
     reader->SetFileName(argv[1]);
+    reader->UpdateInformation();
 
     if(atoi(argv[5])){
 	int *extent = reader->GetOutput()->GetExtent(); //needs vtkImageData.h
@@ -97,6 +98,7 @@ int main (int argc, char *argv[]){
 
     discreteCubes->GenerateValues(
 	endLabel - startLabel + 1, startLabel, endLabel);
+    discreteCubes->UpdateInformation();
     discreteCubes->SetUpdateExtent(0, myId, numProcs, 0);
     discreteCubes->Update();
 
@@ -122,21 +124,6 @@ int main (int argc, char *argv[]){
     writer->SetInputConnection(discreteCubes->GetOutputPort());
     writer->SetFileName(ss2.str().c_str());
     writer->Write();
-
-    smoother->SetInputConnection(discreteCubes->GetOutputPort());
-    smoother->SetNumberOfIterations(smoothingIterations);
-    smoother->NonManifoldSmoothingOn();
-    smoother->NormalizeCoordinatesOn();
-    smoother->SetUpdateExtent(0, myId, numProcs, 0);
-    smoother->Update();
-
-    vtksys_stl::stringstream ss;
-    ss << filePrefix << "_sws.vtp";
-
-    writer->SetInputConnection(smoother->GetOutputPort());
-    writer->SetFileName(ss.str().c_str());
-    writer->Write();
-
 
     controller->Finalize();
 
