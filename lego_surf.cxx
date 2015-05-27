@@ -10,34 +10,35 @@
 //          not exist in the volume, it will be skipped.
 //
 //
+#include <vtkSmartPointer.h>
+
 #include <vtkMetaImageReader.h>
-#include <vtkImageAccumulate.h>
 #include <vtkImageWrapPad.h>
 #include <vtkMaskFields.h>
 #include <vtkThreshold.h>
 #include <vtkTransformFilter.h>
 #include <vtkGeometryFilter.h>
 #include <vtkXMLPolyDataWriter.h>
-#include <vtkSmartPointer.h>
 
 #include <vtkTransform.h>
 #include <vtkImageData.h>
 #include <vtkPointData.h>
 #include <vtkCellData.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtksys/ios/sstream>
 
 int main (int argc, char *argv[]){
-    if (argc < 4){
-        cout << "Usage: " << argv[0] << " InputVolume StartLabel EndLabel" << endl;
+    if (argc != 5){
+        cout << "Usage: "
+             << argv[0]
+             << " Input.mha"
+             << " Output.vtp"
+             << " StartLabel EndLabel"
+             << endl;
         return EXIT_FAILURE;
         }
 
     // Create all of the classes we will need
     vtkSmartPointer<vtkMetaImageReader> reader =
         vtkSmartPointer<vtkMetaImageReader>::New();
-    vtkSmartPointer<vtkImageAccumulate> histogram =
-        vtkSmartPointer<vtkImageAccumulate>::New();
     vtkSmartPointer<vtkImageWrapPad> pad =
         vtkSmartPointer<vtkImageWrapPad>::New();
     vtkSmartPointer<vtkMaskFields> scalarsOff =
@@ -54,29 +55,23 @@ int main (int argc, char *argv[]){
         vtkSmartPointer<vtkXMLPolyDataWriter>::New();
 
     // Define all of the variables
-    unsigned int startLabel = atoi(argv[2]);
-    unsigned int endLabel = atoi(argv[3]);
-    vtkstd::string filePrefix = "Cubes";
+    unsigned int startLabel = atoi(argv[3]);
+    unsigned int endLabel = atoi(argv[4]);
 
     // Generate cubes from labels
     // 1) Read the meta file
-    // 2) Generate a histogram of the labels
     // 3) Convert point data to cell data
-    // 4) Output each cube model into a separate file
+    // 4) Output model with its image-scalars
 
     reader->SetFileName(argv[1]);
-
-    histogram->SetInputConnection(reader->GetOutputPort());
-    histogram->SetComponentExtent(0, endLabel, 0, 0, 0, 0);
-    histogram->SetComponentOrigin(0, 0, 0);
-    histogram->SetComponentSpacing(1, 1, 1);
-    histogram->Update();
+    reader->Update();
 
     // Pad the volume so that we can change the point data into cell
     // data.
     int *extent = reader->GetOutput()->GetExtent();
     pad->SetInputConnection(reader->GetOutputPort());
-    pad->SetOutputWholeExtent(extent[0], extent[1] + 1,
+    pad->SetOutputWholeExtent(
+        extent[0], extent[1] + 1,
         extent[2], extent[3] + 1,
         extent[4], extent[5] + 1);
     pad->Update();
@@ -89,27 +84,22 @@ int main (int argc, char *argv[]){
     selector->SetInputArrayToProcess(0, 0, 0,
         vtkDataObject::FIELD_ASSOCIATION_CELLS,
         vtkDataSetAttributes::SCALARS);
-
+    selector->ThresholdBetween(startLabel, endLabel);
 
     // Shift the geometry by 1/2
     transform->Translate (-.5, -.5, -.5);
     transformModel->SetTransform(transform);
     transformModel->SetInputConnection(selector->GetOutputPort());
 
-    // Strip the scalars from the output
+    // Strip the point scalars from the output, keeping the cell scalars
     scalarsOff->SetInputConnection(transformModel->GetOutputPort());
     scalarsOff->CopyAttributeOff(vtkMaskFields::POINT_DATA,
         vtkDataSetAttributes::SCALARS);
 
     geometry->SetInputConnection(scalarsOff->GetOutputPort());
 
-    selector->ThresholdBetween(startLabel, endLabel);
     writer->SetInputConnection(geometry->GetOutputPort());
-
-    vtksys_stl::stringstream ss;
-    ss << filePrefix << ".vtp";
-
-    writer->SetFileName(ss.str().c_str());
+    writer->SetFileName(argv[2]);
     writer->Write();
 
     return EXIT_SUCCESS;
