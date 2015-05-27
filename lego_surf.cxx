@@ -25,6 +25,24 @@
 #include <vtkPointData.h>
 #include <vtkCellData.h>
 
+#include <vtkCallbackCommand.h>
+#include <vtkCommand.h>
+
+
+void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* clientData, void* callData){
+
+    vtkAlgorithm *filter= static_cast<vtkAlgorithm*>(caller);
+
+    switch(eventId){
+    case vtkCommand::ProgressEvent:
+	fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetClassName(), 100.0 * filter->GetProgress());//stderr is flushed directly
+	break;
+    case vtkCommand::EndEvent:
+	std::cerr << std::endl << std::flush;
+	break;
+        }
+    }
+
 int main (int argc, char *argv[]){
     if (argc != 5){
         cout << "Usage: "
@@ -54,6 +72,9 @@ int main (int argc, char *argv[]){
     vtkSmartPointer<vtkXMLPolyDataWriter> writer =
         vtkSmartPointer<vtkXMLPolyDataWriter>::New();
 
+    vtkSmartPointer<vtkCallbackCommand> eventCallbackVTK = vtkSmartPointer<vtkCallbackCommand>::New();
+    eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
+
     // Define all of the variables
     unsigned int startLabel = atoi(argv[3]);
     unsigned int endLabel = atoi(argv[4]);
@@ -64,7 +85,8 @@ int main (int argc, char *argv[]){
     // 4) Output model with its image-scalars
 
     reader->SetFileName(argv[1]);
-    reader->Update();
+    reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    reader->Update();//nedded for GetExtent
 
     // Pad the volume so that we can change the point data into cell
     // data.
@@ -74,7 +96,7 @@ int main (int argc, char *argv[]){
         extent[0], extent[1] + 1,
         extent[2], extent[3] + 1,
         extent[4], extent[5] + 1);
-    pad->Update();
+    pad->Update();//nedded for SetScalars
 
     // Copy the scalar point data of the volume into the scalar cell data
     pad->GetOutput()->GetCellData()->SetScalars(
@@ -85,6 +107,7 @@ int main (int argc, char *argv[]){
         vtkDataObject::FIELD_ASSOCIATION_CELLS,
         vtkDataSetAttributes::SCALARS);
     selector->ThresholdBetween(startLabel, endLabel);
+    selector->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     // Shift the geometry by 1/2
     transform->Translate (-.5, -.5, -.5);
@@ -97,9 +120,11 @@ int main (int argc, char *argv[]){
         vtkDataSetAttributes::SCALARS);
 
     geometry->SetInputConnection(scalarsOff->GetOutputPort());
+    geometry->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     writer->SetInputConnection(geometry->GetOutputPort());
     writer->SetFileName(argv[2]);
+    writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     writer->Write();
 
     return EXIT_SUCCESS;
