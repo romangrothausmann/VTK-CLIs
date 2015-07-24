@@ -7,7 +7,7 @@
 #include <vtkStreamingDemandDrivenPipeline.h>
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>//only 2 parallel readers exist (6.2): vtkMPIImageReader (RAW), vtkPNrrdReader (Nrrd)
+#include <vtkXMLImageDataReader.h>//seems to be the only reader that works, has outInfo->Set(CAN_PRODUCE_SUB_EXTENT(), 1)  neither vtkMetaImageReader nor vtkPNrrdReader worked, vtkMPIImageReader (RAW) not tested
 #include <vtkImageData.h>//for GetExtent()
 #include <vtkImageConstantPad.h>
 #include <vtkDiscreteMarchingCubes.h>
@@ -57,8 +57,8 @@ int main (int argc, char *argv[]){
     numProcs = controller->GetNumberOfProcesses();
 
     // Create all of the classes we will need
-    vtkSmartPointer<vtkMetaImageReader> reader =
-	vtkSmartPointer<vtkMetaImageReader>::New();
+    vtkSmartPointer<vtkXMLImageDataReader> reader =
+	vtkSmartPointer<vtkXMLImageDataReader>::New();
     vtkSmartPointer<vtkDiscreteMarchingCubes> discreteCubes =
 	vtkSmartPointer<vtkDiscreteMarchingCubes>::New();
     vtkSmartPointer<vtkWindowedSincPolyDataFilter> smoother =
@@ -119,7 +119,7 @@ int main (int argc, char *argv[]){
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     vtksys_stl::stringstream ss2;
-    ss2 << filePrefix << "_raw.vtp";
+    ss2 << filePrefix << "_raw.pvtp";
 
     writer->SetInputConnection(discreteCubes->GetOutputPort());
     writer->SetFileName(ss2.str().c_str());
