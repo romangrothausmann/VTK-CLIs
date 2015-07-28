@@ -9,7 +9,9 @@
 #include <vtkXMLPolyDataReader.h>
 #include <vtkProbeFilter.h>
 #include <vtkLookupTable.h>
-#include <vtkPolyDataMapper.h>
+#include <vtkPolyDataMapper.h>//as input is definitly vtkPolyData othersiwe use vtkDataSetMapper
+#include <vtkImageData.h>//reader1->GetOutput()
+#include <vtkPointData.h>//reader1->GetOutput()->GetPointData()
 #include <vtkActor.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
@@ -82,23 +84,52 @@ int main (int argc, char *argv[]){
     reader1->Update();
 
     vtkSmartPointer<vtkProbeFilter> filter= vtkSmartPointer<vtkProbeFilter>::New();
-    filter->SetInputConnection(0, reader0->GetOutputPort());
-    filter->SetInputConnection(1, reader1->GetOutputPort());
+    filter->SetInputConnection(reader0->GetOutputPort());
+    filter->SetSourceConnection(reader1->GetOutputPort());
+    filter->PassPointArraysOff();
+    filter->PassCellArraysOff();
+    filter->PassFieldArraysOff();
+    filter->ComputeToleranceOn();
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
+    // Now check for point data
+    vtkPointData *pd = filter->GetOutput()->GetPointData();
+    if(pd){
+        std::cout << " contains point data with "
+                  << pd->GetNumberOfArrays()
+                  << " arrays." << std::endl;
+        for (int i = 0; i < pd->GetNumberOfArrays(); i++)
+            {
+            std::cout << "\tArray " << i
+                      << " is named "
+                      << (pd->GetArrayName(i) ? pd->GetArrayName(i) : "NULL")
+                      << std::endl;
+            }
+        }
+
+
+    //// vtkLookupTable always goes through HSV, use vtkColorTransferFunction for other color spaces
     vtkSmartPointer<vtkLookupTable> lut= vtkSmartPointer<vtkLookupTable>::New();
     //lut->SetNumberOfColors(100);
-    //lut->SetHueRange(1,0.0);//rainbow
-    //lut->SetHueRange(0.0, 0.667);// This creates a red to blue lut.
-    lut->SetHueRange(0.667, 0.0);// This creates a blue to red lut.
-
+    //lut->SetHueRange(1,0.0);//red to red rainbow
+    //lut->SetHueRange(0.0, 0.667);// This creates a red to blue rainbow lut.
+    lut->SetHueRange(0.667, 0.0);// This creates a blue to red rainbow lut.
+    lut->SetSaturationRange(1, 1);// no color saturation
+    lut->SetValueRange(1, 1);// from black to white
+    //lut->SetBelowRangeColor();
+    //lut->SetAboveRangeColor();
+    //lut->UseAboveRangeColorOn();
+    lut->SetRampToLinear();
     lut->SetRange(atof(argv[4]), atof(argv[5]));
     lut->Build();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper= vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(filter->GetOutputPort());
     mapper->SetLookupTable(lut);
+    mapper->SetColorModeToMapScalars();//essential for char data
+    mapper->ScalarVisibilityOn();//seems to be default
+    mapper->UseLookupTableScalarRangeOn();//essential!
 
     vtkSmartPointer<vtkActor> actor= vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
