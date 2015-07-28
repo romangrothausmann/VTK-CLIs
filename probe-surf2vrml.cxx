@@ -8,7 +8,7 @@
 #include <vtkMetaImageReader.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkProbeFilter.h>
-#include <vtkLookupTable.h>
+#include <vtkColorTransferFunction.h>
 #include <vtkPolyDataMapper.h>//as input is definitly vtkPolyData othersiwe use vtkDataSetMapper
 #include <vtkImageData.h>//reader1->GetOutput()
 #include <vtkPointData.h>//reader1->GetOutput()->GetPointData()
@@ -93,20 +93,11 @@ int main (int argc, char *argv[]){
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
-    //// vtkLookupTable always goes through HSV, use vtkColorTransferFunction for other color spaces
-    vtkSmartPointer<vtkLookupTable> lut= vtkSmartPointer<vtkLookupTable>::New();
-    //lut->SetNumberOfColors(100);
-    //lut->SetHueRange(1,0.0);//red to red rainbow
-    //lut->SetHueRange(0.0, 0.667);// This creates a red to blue rainbow lut.
-    lut->SetHueRange(0.667, 0.0);// This creates a blue to red rainbow lut.
-    lut->SetSaturationRange(1, 1);// no color saturation
-    lut->SetValueRange(1, 1);// from black to white
-    //lut->SetBelowRangeColor();
-    //lut->SetAboveRangeColor();
-    //lut->UseAboveRangeColorOn();
-    lut->SetRampToLinear();
-    lut->SetRange(atof(argv[4]), atof(argv[5]));
-    lut->Build();
+    vtkSmartPointer<vtkColorTransferFunction> lut= vtkSmartPointer<vtkColorTransferFunction>::New();
+    lut->SetColorSpaceToRGB();
+    lut->AddRGBPoint(atof(argv[4]),0,0,1);//blue
+    lut->AddRGBPoint(atof(argv[5]),1,0,0);//red
+    lut->SetScaleToLinear();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper= vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(filter->GetOutputPort());
