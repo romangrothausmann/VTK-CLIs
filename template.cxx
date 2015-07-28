@@ -48,21 +48,22 @@ int main (int argc, char *argv[]){
         return -1;
         }
 
+
     vtkSmartPointer<vtkCallbackCommand> eventCallbackVTK = vtkSmartPointer<vtkCallbackCommand>::New();
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
-    vtkSmartPointer<vtkXMLPolyDataReader> reader= vtkSmartPointer<vtkXMLPolyDataReader>::New();
-    vtkSmartPointer<> filter= vtkSmartPointer<>::New();
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer= vtkSmartPointer<vtkXMLPolyDataWriter>::New();
 
+    vtkSmartPointer<vtkXMLPolyDataReader> reader= vtkSmartPointer<vtkXMLPolyDataReader>::New();
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
+    vtkSmartPointer<> filter= vtkSmartPointer<>::New();
     filter->SetInputConnection(0, reader->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
+    vtkSmartPointer<vtkXMLPolyDataWriter> writer= vtkSmartPointer<vtkXMLPolyDataWriter>::New();
     writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[2]);
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
