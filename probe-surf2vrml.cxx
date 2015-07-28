@@ -93,22 +93,6 @@ int main (int argc, char *argv[]){
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
-    // Now check for point data
-    vtkPointData *pd = filter->GetOutput()->GetPointData();
-    if(pd){
-        std::cout << " contains point data with "
-                  << pd->GetNumberOfArrays()
-                  << " arrays." << std::endl;
-        for (int i = 0; i < pd->GetNumberOfArrays(); i++)
-            {
-            std::cout << "\tArray " << i
-                      << " is named "
-                      << (pd->GetArrayName(i) ? pd->GetArrayName(i) : "NULL")
-                      << std::endl;
-            }
-        }
-
-
     //// vtkLookupTable always goes through HSV, use vtkColorTransferFunction for other color spaces
     vtkSmartPointer<vtkLookupTable> lut= vtkSmartPointer<vtkLookupTable>::New();
     //lut->SetNumberOfColors(100);
@@ -127,7 +111,9 @@ int main (int argc, char *argv[]){
     vtkSmartPointer<vtkPolyDataMapper> mapper= vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(filter->GetOutputPort());
     mapper->SetLookupTable(lut);
-    mapper->SetColorModeToMapScalars();//essential for char data
+    mapper->SetScalarModeToUsePointFieldData();//only then is SelectColorArray used
+    mapper->SelectColorArray(reader1->GetOutput()->GetPointData()->GetArrayName(0));//"MetaImage"
+    //mapper->SelectColorArray(filter->GetValidPointMaskArrayName());//"vtkValidPointMask"
     mapper->ScalarVisibilityOn();//seems to be default
     mapper->UseLookupTableScalarRangeOn();//essential!
 
