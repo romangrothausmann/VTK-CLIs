@@ -19,6 +19,10 @@
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
 
+#include <GL/glx.h>
+#include <GL/gl.h>
+int checkOpenGL();
+
 
 void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* clientData, void* callData){
 
@@ -112,16 +116,56 @@ int main (int argc, char *argv[]){
 
     ////rendering not needed for vtkVRMLExporter
     if(atoi(argv[6])){
-	renderWindow->Render();
-	renderWindowInteractor->Start();
-	}
+        if(checkOpenGL()){
+            std::cerr << "OpenGL context is direct. Rendering should be save in conjunction with vglrun." << std::endl;
+            renderWindow->Render();
+            renderWindowInteractor->Start();
+            }
+        else
+            std::cerr << "OpenGL context is indirect. Not rendering to prevent crashes of Xvnc when vglrun is used later on!" << std::endl;
+        }
 
     vtkSmartPointer<vtkVRMLExporter> writer= vtkSmartPointer<vtkVRMLExporter>::New();
     writer->SetInput(renderWindow);
     writer->SetFileName(argv[3]);
     //writer->SetSpeed(5.5)//default 4
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    std::cerr << "VRML export... ";
     writer->Write();
+    std::cerr << "done." << std::endl;
 
     return EXIT_SUCCESS;
+    }
+
+
+int checkOpenGL(){
+    ////see https://www.opengl.org/discussion_boards/showthread.php/165856-Minimal-GLX-OpenGL3-0-example?p=1178905&viewfull=1#post1178905  and  glxdemos/glxspheres.c
+    ///basicly only the result of glXIsDirect is needed, however it needs some variables...
+
+    Display *dpy= XOpenDisplay(0);
+
+    int fbcount;
+
+    //// these three cause a segfault
+    // static int attributeList[]= { GLX_RENDER_TYPE, GLX_RGBA_BIT, GLX_DOUBLEBUFFER, GLX_RED_SIZE, 1, GLX_GREEN_SIZE, 1, GLX_BLUE_SIZE, 1, None };
+    // GLXFBConfig *fbc = glXChooseFBConfig(dpy, DefaultScreen(dpy), attributeList, &fbcount);
+    // XVisualInfo *vi = glXGetVisualFromFBConfig(dpy, fbc[0]);
+
+    //// these work
+    static int attributeList[] = { GLX_RGBA, GLX_DOUBLEBUFFER, GLX_RED_SIZE, 1, GLX_GREEN_SIZE, 1, GLX_BLUE_SIZE, 1, None };
+    GLXFBConfig *fbc = glXChooseFBConfig(dpy, DefaultScreen(dpy), 0, &fbcount);
+    XVisualInfo *vi = glXChooseVisual(dpy, DefaultScreen(dpy), attributeList);
+
+    XSetWindowAttributes swa;
+    swa.colormap= XCreateColormap(dpy, RootWindow(dpy, vi->screen), vi->visual, AllocNone);
+    swa.border_pixel= 0;
+    swa.event_mask= StructureNotifyMask;
+    Window win= XCreateWindow(dpy, RootWindow(dpy, vi->screen), 0, 0, 100, 100, 0, vi->depth, InputOutput, vi->visual, CWBorderPixel|CWColormap|CWEventMask, &swa);
+
+    XMapWindow(dpy, win);
+
+    GLXContext ctx= glXCreateContext(dpy, vi, 0, GL_TRUE);
+
+    //fprintf(stderr, "OpenGL Renderer: %s\n", glGetString(GL_RENDERER));//returns Null
+    return(glXIsDirect(dpy, ctx));
     }
