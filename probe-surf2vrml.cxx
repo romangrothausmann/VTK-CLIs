@@ -37,11 +37,12 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 6){
+    if (argc != 7){
         std::cerr << "Usage: " << argv[0]
                   << " input-surf input-vol"
                   << " output"
                   << " lut-start lut-end"
+                  << " render"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -109,8 +110,11 @@ int main (int argc, char *argv[]){
     vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor= vtkSmartPointer<vtkRenderWindowInteractor>::New();
     renderWindowInteractor->SetRenderWindow(renderWindow);
 
-    renderWindow->Render();
-    renderWindowInteractor->Start();
+    ////rendering not needed for vtkVRMLExporter
+    if(atoi(argv[6])){
+	renderWindow->Render();
+	renderWindowInteractor->Start();
+	}
 
     vtkSmartPointer<vtkVRMLExporter> writer= vtkSmartPointer<vtkVRMLExporter>::New();
     writer->SetInput(renderWindow);
