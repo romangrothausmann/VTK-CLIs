@@ -1,16 +1,18 @@
 // program to apply vtkDiscreteMarchingCubes
-//01: based on discret_marching_cubes05.cxx
+//01: based on discrete_marching-cubes.cxx, ParallelCompositeTime/Parallel/parallel1_answer.cxx (kitware VTK-workshop), IO/MPIImage/Testing/Cxx/ParallelIso.cxx, Examples/ParallelProcessing/Generic/Cxx/ParallelIso.cxx and Examples/Infovis/Cxx/ParallelBFS.cxx
 
 
 
+#include <vtkMPIController.h>
+#include <vtkStreamingDemandDrivenPipeline.h>
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
+#include <vtkXMLImageDataReader.h>//seems to be the only reader that works, has outInfo->Set(CAN_PRODUCE_SUB_EXTENT(), 1)  neither vtkMetaImageReader nor vtkPNrrdReader worked, vtkMPIImageReader (RAW) not tested
 #include <vtkImageData.h>//for GetExtent()
 #include <vtkImageConstantPad.h>
 #include <vtkDiscreteMarchingCubes.h>
 #include <vtkWindowedSincPolyDataFilter.h>
-#include <vtkXMLPolyDataWriter.h>
+#include <vtkXMLPPolyDataWriter.h>
 #include <vtkFeatureEdges.h>
 
 #include <vtkCallbackCommand.h>
@@ -33,7 +35,8 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 
 int main (int argc, char *argv[]){
- 
+    int myId, numProcs;
+
     if (argc != 6){
 	std::cerr << "Usage: " << argv[0]
 		  << " input"
@@ -44,9 +47,18 @@ int main (int argc, char *argv[]){
 	return EXIT_FAILURE;
 	}
 
+    vtkSmartPointer<vtkMPIController> controller =
+	vtkSmartPointer<vtkMPIController>::New();
+    controller->Initialize(&argc, &argv);
+
+    // Obtain the id of the running process and the total
+    // number of processes
+    myId = controller->GetLocalProcessId();
+    numProcs = controller->GetNumberOfProcesses();
+
     // Create all of the classes we will need
-    vtkSmartPointer<vtkMetaImageReader> reader =
-	vtkSmartPointer<vtkMetaImageReader>::New();
+    vtkSmartPointer<vtkXMLImageDataReader> reader =
+	vtkSmartPointer<vtkXMLImageDataReader>::New();
     vtkSmartPointer<vtkDiscreteMarchingCubes> discreteCubes =
 	vtkSmartPointer<vtkDiscreteMarchingCubes>::New();
     vtkSmartPointer<vtkWindowedSincPolyDataFilter> smoother =
@@ -55,8 +67,8 @@ int main (int argc, char *argv[]){
         vtkSmartPointer<vtkImageConstantPad>::New();
     vtkSmartPointer<vtkFeatureEdges> featureEdges =
         vtkSmartPointer<vtkFeatureEdges>::New();
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer =
-	vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+    vtkSmartPointer<vtkXMLPPolyDataWriter> writer =
+	vtkSmartPointer<vtkXMLPPolyDataWriter>::New();
 
     vtkSmartPointer<vtkCallbackCommand> eventCallbackVTK = vtkSmartPointer<vtkCallbackCommand>::New();
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
@@ -69,8 +81,7 @@ int main (int argc, char *argv[]){
     unsigned int smoothingIterations = 20;
 
     reader->SetFileName(argv[1]);
-    reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader->Update();
+    reader->UpdateInformation();
 
     if(atoi(argv[5])){
 	int *extent = reader->GetOutput()->GetExtent(); //needs vtkImageData.h
@@ -87,60 +98,34 @@ int main (int argc, char *argv[]){
 
     discreteCubes->GenerateValues(
 	endLabel - startLabel + 1, startLabel, endLabel);
-    discreteCubes->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    discreteCubes->UpdateInformation();
+    discreteCubes->SetUpdateExtent(0, myId, numProcs, 0);
     discreteCubes->Update();
 
+    vtkIdType numCells = discreteCubes->GetOutput()->GetNumberOfCells();
+    cerr << "Process (" << myId << "): " 
+	 << "Cells in output of contour on process after requesting"
+	" 1 piece from " << numProcs << " pieces: " << numCells << endl;
+
+    vtkIdType totalNumCells = 0;
+    controller->Reduce(&numCells, &totalNumCells, 1, vtkCommunicator::SUM_OP, 0);
+    if (myId == 0)
+	cerr << "Process (" << myId << "): " 
+	     << "Cell count after reduction: " << totalNumCells << endl;
+
+    writer->SetNumberOfPieces(numProcs);
+    writer->SetStartPiece(myId);
+    writer->SetEndPiece(myId);
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     vtksys_stl::stringstream ss2;
-    ss2 << filePrefix << "_raw.vtp";
+    ss2 << filePrefix << "_raw.pvtp";
 
     writer->SetInputConnection(discreteCubes->GetOutputPort());
     writer->SetFileName(ss2.str().c_str());
     writer->Write();
 
-
-    smoother->SetInputConnection(discreteCubes->GetOutputPort());
-    smoother->SetNumberOfIterations(smoothingIterations);
-    smoother->NonManifoldSmoothingOn();
-    smoother->NormalizeCoordinatesOn();
-    smoother->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    smoother->Update();
-
-    vtksys_stl::stringstream ss;
-    ss << filePrefix << "_sws.vtp";
-
-    writer->SetInputConnection(smoother->GetOutputPort());
-    writer->SetFileName(ss.str().c_str());
-    writer->Write();
-
-
-    ///check if surface is closed
-    std::cout << "Checking if surface is closed..." << std::endl;
-    featureEdges->FeatureEdgesOff();
-    featureEdges->BoundaryEdgesOn();
-    featureEdges->NonManifoldEdgesOff();
-    featureEdges->SetInputConnection(discreteCubes->GetOutputPort());
-    featureEdges->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    featureEdges->Update();
-
-    int numberOfEdges = featureEdges->GetOutput()->GetNumberOfCells();
-    if(numberOfEdges > 0)
-        std::cout << "Surface is not closed. # open edges: " << numberOfEdges << std::endl;
-    else
-        std::cout << "Surface is closed. # open edges: " << numberOfEdges << std::endl;
-
-    ///check if surface has non-manifold edges
-    std::cout << "Checking if surface has non-manifold edges..." << std::endl;
-    featureEdges->BoundaryEdgesOff();
-    featureEdges->NonManifoldEdgesOn();
-    featureEdges->Update();
-
-    numberOfEdges = featureEdges->GetOutput()->GetNumberOfCells();
-    if(numberOfEdges > 0)
-        std::cout << "Surface has non-manifold edges. # of non-manifold edges: " << numberOfEdges << std::endl;
-    else
-        std::cout << "Surface has only manifold edges. # of non-manifold edges: " << numberOfEdges << std::endl;
+    controller->Finalize();
 
     return EXIT_SUCCESS;
     }
