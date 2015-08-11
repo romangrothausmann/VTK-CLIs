@@ -63,6 +63,12 @@ SET(Libraries
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 
+SET(CurrentExe "marching-cubes")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
 SET(CurrentExe "discrete_marching-cubes")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})

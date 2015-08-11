@@ -95,7 +95,7 @@ int main (int argc, char *argv[]){
 
     vtkSmartPointer<vtkColorTransferFunction> lut= vtkSmartPointer<vtkColorTransferFunction>::New();
     lut->SetColorSpaceToRGB();
-    lut->AddRGBPoint(atof(argv[4]),0,0,1);//blue
+    lut->AddRGBPoint(atof(argv[4]),0.4,0.4,1);//light-blue
     lut->AddRGBPoint(atof(argv[5]),1,0,0);//red
     lut->SetScaleToLinear();
 

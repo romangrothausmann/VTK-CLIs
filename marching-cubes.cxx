@@ -1,4 +1,4 @@
-////program for
+////program to create a marching-cubes surface with vtkContourFilter
 //01: based on template.cxx
 
 
@@ -6,6 +6,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkMetaImageReader.h>
+#include <vtkContourFilter.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -29,7 +30,7 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
         std::cerr << "Error: " << static_cast<char*>(callData) << std::endl << std::flush;
         break;
     case vtkCommand::WarningEvent:
-            std::cerr << "Warning: " << static_cast<char*>(callData) << std::endl << std::flush;
+        std::cerr << "Warning: " << static_cast<char*>(callData) << std::endl << std::flush;
         break;
         }
     }
@@ -37,11 +38,12 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 5){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
+                  << " iso-value"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -66,8 +68,11 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    vtkSmartPointer<> filter= vtkSmartPointer<>::New();
-    filter->SetInputConnection(0, reader->GetOutputPort());
+    vtkSmartPointer<vtkContourFilter> filter= vtkSmartPointer<vtkContourFilter>::New();
+    filter->SetInputConnection(reader->GetOutputPort());
+    filter->SetValue(0, atof(argv[4]));
+    filter->ComputeScalarsOff();
+    filter->ComputeGradientsOff();
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
