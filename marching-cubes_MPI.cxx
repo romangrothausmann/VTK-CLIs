@@ -1,13 +1,14 @@
 ////program to create a marching-cubes surface with vtkContourFilter
-//01: based on template.cxx
+//01: based on marching-cubes.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
+#include <vtkMPIController.h>
+#include <vtkXMLImageDataReader.h>//seems to be the only reader that works, has outInfo->Set(CAN_PRODUCE_SUB_EXTENT(), 1)  neither vtkMetaImageReader nor vtkPNrrdReader worked, vtkMPIImageReader (RAW) not tested
 #include <vtkContourFilter.h>
-#include <vtkXMLPolyDataWriter.h>
+#include <vtkXMLPPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -48,13 +49,13 @@ int main (int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The input should end with .mha or .mhd" << std::endl;
+    if(!(strcasestr(argv[1],".vti"))) {
+        std::cerr << "The input should end with .vti" << std::endl;
         return -1;
         }
 
-    if(!(strcasestr(argv[2],".vtp"))) {
-        std::cerr << "The output should end with .vtp" << std::endl;
+    if(!(strcasestr(argv[2],".pvtp"))) {
+        std::cerr << "The output should end with .pvtp" << std::endl;
         return -1;
         }
 
@@ -62,11 +63,15 @@ int main (int argc, char *argv[]){
     vtkSmartPointer<vtkCallbackCommand> eventCallbackVTK = vtkSmartPointer<vtkCallbackCommand>::New();
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
+    vtkSmartPointer<vtkMPIController> controller= vtkSmartPointer<vtkMPIController>::New();
+    controller->Initialize(&argc, &argv);
+    int myId = controller->GetLocalProcessId();
+    int numProcs = controller->GetNumberOfProcesses();
 
-    vtkSmartPointer<vtkMetaImageReader> reader= vtkSmartPointer<vtkMetaImageReader>::New();
+    vtkSmartPointer<vtkXMLImageDataReader> reader= vtkSmartPointer<vtkXMLImageDataReader>::New();
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader->Update();
+    //reader->UpdateInformation();//not needed
 
     vtkSmartPointer<vtkContourFilter> filter= vtkSmartPointer<vtkContourFilter>::New();
     filter->SetInputConnection(reader->GetOutputPort());
@@ -74,11 +79,16 @@ int main (int argc, char *argv[]){
     filter->ComputeScalarsOff();
     filter->ComputeGradientsOff();
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    filter->UpdateInformation();
+    filter->SetUpdateExtent(0, myId, numProcs, 0);
     filter->Update();
 
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer= vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+    vtkSmartPointer<vtkXMLPPolyDataWriter> writer= vtkSmartPointer<vtkXMLPPolyDataWriter>::New();
     writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[2]);
+    writer->SetNumberOfPieces(numProcs);
+    writer->SetStartPiece(myId);
+    writer->SetEndPiece(myId);
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
     if(atoi(argv[3]))
         writer->SetCompressorTypeToZLib();//default
@@ -86,6 +96,8 @@ int main (int argc, char *argv[]){
         writer->SetCompressorTypeToNone();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     writer->Write();
+
+    controller->Finalize();
 
     return EXIT_SUCCESS;
     }

@@ -69,6 +69,12 @@ ADD_EXECUTABLE(${CurrentExe}
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
+SET(CurrentExe "marching-cubes_MPI")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
 SET(CurrentExe "discrete_marching-cubes")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
