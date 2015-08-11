@@ -23,6 +23,14 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
     case vtkCommand::EndEvent:
         std::cerr << std::endl << std::flush;
         break;
+
+    //// VTK does not throw errors (http://public.kitware.com/pipermail/vtkusers/2009-February/050805.html) use Error-Events: http://www.cmake.org/Wiki/VTK/Examples/Cxx/Utilities/ObserveError
+    case vtkCommand::ErrorEvent:
+        std::cerr << "Error: " << static_cast<char*>(callData) << std::endl << std::flush;
+        break;
+    case vtkCommand::WarningEvent:
+            std::cerr << "Warning: " << static_cast<char*>(callData) << std::endl << std::flush;
+        break;
         }
     }
 
@@ -39,7 +47,7 @@ int main (int argc, char *argv[]){
         }
 
     if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The second input should end with .mha or .mhd" << std::endl;
+        std::cerr << "The input should end with .mha or .mhd" << std::endl;
         return -1;
         }
 
@@ -53,7 +61,7 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    vtkSmartPointer<vtkXMLPolyDataReader> reader= vtkSmartPointer<vtkXMLPolyDataReader>::New();
+    vtkSmartPointer<vtkMetaImageReader> reader= vtkSmartPointer<vtkMetaImageReader>::New();
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
