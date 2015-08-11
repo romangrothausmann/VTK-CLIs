@@ -1,11 +1,11 @@
-////program for
+////program to convert pvtp to vtp files
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
+#include <vtkXMLPPolyDataReader.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -46,8 +46,8 @@ int main (int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The input should end with .mha or .mhd" << std::endl;
+    if(!(strcasestr(argv[1],".pvtp"))) {
+        std::cerr << "The input should end with .pvtp" << std::endl;
         return -1;
         }
 
@@ -61,18 +61,13 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    vtkSmartPointer<vtkMetaImageReader> reader= vtkSmartPointer<vtkMetaImageReader>::New();
+    vtkSmartPointer<vtkXMLPPolyDataReader> reader= vtkSmartPointer<vtkXMLPPolyDataReader>::New();
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    vtkSmartPointer<> filter= vtkSmartPointer<>::New();
-    filter->SetInputConnection(0, reader->GetOutputPort());
-    filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    filter->Update();
-
     vtkSmartPointer<vtkXMLPolyDataWriter> writer= vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-    writer->SetInputConnection(filter->GetOutputPort());
+    writer->SetInputConnection(reader->GetOutputPort());
     writer->SetFileName(argv[2]);
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
     if(atoi(argv[3]))
