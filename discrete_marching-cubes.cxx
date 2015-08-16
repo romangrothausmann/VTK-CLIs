@@ -8,7 +8,7 @@
 #include <vtkMetaImageReader.h>
 #include <vtkImageData.h>//for GetExtent()
 #include <vtkImageConstantPad.h>
-#include <vtkDiscreteMarchingCubes.h>
+#include "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.h"
 #include <vtkWindowedSincPolyDataFilter.h>
 #include <vtkXMLPolyDataWriter.h>
 #include <vtkFeatureEdges.h>
@@ -87,8 +87,11 @@ int main (int argc, char *argv[]){
 
     discreteCubes->GenerateValues(
 	endLabel - startLabel + 1, startLabel, endLabel);
+    discreteCubes->ComputeNeighboursOn();//expecting own extension to vtkDiscreteMarchingCubes
     discreteCubes->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     discreteCubes->Update();
+
+    std::cerr << "Verts: " << discreteCubes->GetOutput()->GetNumberOfPoints() << " Cells: " << discreteCubes->GetOutput()->GetNumberOfCells() << std::endl;
 
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
