@@ -1,0 +1,3 @@
+[submodule "filter/external/VTK-GraphConversions"]
+	path = filter/external/VTK-GraphConversions
+	url = https://github.com/romangrothausmann/VTK-GraphConversions.git
