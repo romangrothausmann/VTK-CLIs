@@ -12,6 +12,9 @@
 #include <vtkCommand.h>
 
 
+#define VTK_CREATE(type, name) vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+
+
 void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* clientData, void* callData){
 
     vtkAlgorithm *filter= static_cast<vtkAlgorithm*>(caller);
@@ -57,21 +60,21 @@ int main (int argc, char *argv[]){
         }
 
 
-    vtkSmartPointer<vtkCallbackCommand> eventCallbackVTK = vtkSmartPointer<vtkCallbackCommand>::New();
+    VTK_CREATE(vtkCallbackCommand, eventCallbackVTK);
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    vtkSmartPointer<vtkMetaImageReader> reader= vtkSmartPointer<vtkMetaImageReader>::New();
+    VTK_CREATE(vtkMetaImageReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    vtkSmartPointer<> filter= vtkSmartPointer<>::New();
+    VTK_CREATE(, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer= vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+    VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[2]);
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
