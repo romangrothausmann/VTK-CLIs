@@ -1,11 +1,14 @@
-////program for
+////program for vtkBoostBiconnectedComponents
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
+#include <vtkXMLPolyDataReader.h>
+#include "vtkPolyDataToGraph.h"
+#include <vtkBoostBiconnectedComponents.h>
+#include <vtkGraphToPolyData.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -49,8 +52,8 @@ int main (int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The input should end with .mha or .mhd" << std::endl;
+    if(!(strcasestr(argv[1],".vtp"))) {
+        std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -64,18 +67,27 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkMetaImageReader, reader);
+    VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
+    VTK_CREATE(vtkPolyDataToGraph, polyDataToGraphFilter);
+    polyDataToGraphFilter->SetInputConnection(reader->GetOutputPort());
+    polyDataToGraphFilter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
+    VTK_CREATE(vtkBoostBiconnectedComponents, filter);
+    filter->SetInputConnection(polyDataToGraphFilter->GetOutputPort());
+    filter->SetOutputArrayName("biconnected_component");
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
+    VTK_CREATE(vtkGraphToPolyData, graphToPolyData);
+    graphToPolyData->SetInputConnection(filter->GetOutputPort());
+    graphToPolyData->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
-    writer->SetInputConnection(filter->GetOutputPort());
+    writer->SetInputConnection(graphToPolyData->GetOutputPort());
     writer->SetFileName(argv[2]);
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
     if(atoi(argv[3]))

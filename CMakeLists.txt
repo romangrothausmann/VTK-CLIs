@@ -62,6 +62,13 @@ SET(Libraries
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+OPTION(BUILD_vtkPolyDataToGraph "Build programs depending on vtkPolyDataToGraph from David Doria (not in VTK)" ON)
+IF(BUILD_vtkPolyDataToGraph)
+ SET(VTKGraphConversionsDir "filter/external/VTK-GraphConversions/")
+ INCLUDE_DIRECTORIES(${VTKGraphConversionsDir})
+# ADD_SUBDIRECTORY(filters/external/VTK-GraphConversions/)
+ENDIF()
+
 
 SET(CurrentExe "marching-cubes")
 ADD_EXECUTABLE(${CurrentExe}
@@ -104,3 +111,11 @@ ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+IF(BUILD_vtkPolyDataToGraph)
+SET(CurrentExe "label_biconnected_components")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe} ${VTKGraphConversionsDir}/vtkPolyDataToGraph.cxx)
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+ENDIF()
