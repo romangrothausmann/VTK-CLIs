@@ -6,6 +6,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkTriangleFilter.h>
 #include "vtkPolyDataToGraph.h"
 #include <vtkBoostBiconnectedComponents.h>
 #include <vtkGraphToPolyData.h>
@@ -72,8 +73,12 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
+    VTK_CREATE(vtkTriangleFilter, triangulate);
+    triangulate->SetInputConnection(reader->GetOutputPort());
+    triangulate->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
     VTK_CREATE(vtkPolyDataToGraph, polyDataToGraphFilter);
-    polyDataToGraphFilter->SetInputConnection(reader->GetOutputPort());
+    polyDataToGraphFilter->SetInputConnection(triangulate->GetOutputPort());
     polyDataToGraphFilter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     VTK_CREATE(vtkBoostBiconnectedComponents, filter);
