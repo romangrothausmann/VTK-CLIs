@@ -1,11 +1,12 @@
-////program for
+////program for vtkDijkstraGraphGeodesicPath
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
+#include <vtkXMLPolyDataReader.h>
+#include <vtkDijkstraGraphGeodesicPath.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,17 +41,18 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc < 6){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
+		  << " startVid endVid [repellVid...]"
                   << std::endl;
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The input should end with .mha or .mhd" << std::endl;
+    if(!(strcasestr(argv[1],".vtp"))) {
+        std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -64,13 +66,28 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkMetaImageReader, reader);
+    VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
+    vtkIdType sVertex= atoi(argv[4]); 
+    vtkIdType eVertex= atoi(argv[5]);
+    vtkSmartPointer<vtkPoints> points= vtkSmartPointer<vtkPoints>::New();
+
+    for(vtkIdType i= 6; i < argc; i++)
+	points->InsertNextPoint(reader->GetOutput()->GetPoint(atoi(argv[i])));
+
+    VTK_CREATE(vtkDijkstraGraphGeodesicPath, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
+    filter->SetStartVertex(sVertex);
+    filter->SetEndVertex(eVertex);
+    filter->StopWhenEndReachedOn();//off only makes sense if run for multiple eVertex with same sVertex?
+    // filter->UseScalarWeightsOn();//uses POINT scalars! (see code of CalculateStaticEdgeCost)
+    if(points->GetNumberOfPoints()){
+	filter->RepelPathFromVerticesOn();
+	filter->SetRepelVertices(points);
+	}
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 

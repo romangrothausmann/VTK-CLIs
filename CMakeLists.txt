@@ -119,3 +119,9 @@ ADD_EXECUTABLE(${CurrentExe}
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 ENDIF()
+
+SET(CurrentExe "shortest-path_dij")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
