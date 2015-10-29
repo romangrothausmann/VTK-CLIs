@@ -1,6 +1,8 @@
 ////program to create a hull from a set of planes
 //01: based on template.cxx and FacetAnalyser.cxx
 
+////ToDo
+// - extend with voxelization as e.g. in image-clipper
 
 
 
