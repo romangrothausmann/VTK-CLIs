@@ -6,7 +6,6 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkDoubleArray.h>
-#include <vtkMath.h>
 #include <vtkPlanes.h>
 #include <vtkHull.h>
 #include <vtkCleanPolyData.h>
@@ -50,6 +49,8 @@ int main (int argc, char *argv[]){
                   << " compress"
                   << " as-is(0)|outer-hull(1)"
                   << " origin_x origin_y origin_z normal_x normal_y normal_z ..."
+                  << std::endl
+                  << " NOTE: Normals do not have to be normalized."
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -74,7 +75,6 @@ int main (int argc, char *argv[]){
         c[0]= atof(argv[i+3]);
         c[1]= atof(argv[i+4]);
         c[2]= atof(argv[i+5]);
- 	vtkMath::Normalize(c);
         normals->InsertNextTuple(c);
 
         fprintf(stderr, "%d: %6.2f;%6.2f;%6.2f     %6.2f;%6.2f;%6.2f\n", (i-4)/6,  atof(argv[i+0]), atof(argv[i+1]), atof(argv[i+2]), c[0], c[1], c[2]);
