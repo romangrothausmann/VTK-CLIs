@@ -14,7 +14,8 @@
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkMetaImageReader.h>
-#include <vtkImageData.h>
+#include <vtkInformation.h>//for UpdateInformation
+#include <vtkStreamingDemandDrivenPipeline.h>//for extent
 #include <vtkPolyDataToImageStencil.h>
 #include <vtkImageStencilToImage.h>
 #include <vtkMetaImageWriter.h>
@@ -141,16 +142,32 @@ int main (int argc, char *argv[]){
 
     ////voxelization
 
+    int extent[6];
+    double spacing[3];
+    double origin[3];
+
     VTK_CREATE(vtkMetaImageReader, reader);
     reader->SetFileName(argv[4]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader->Update();
+    reader->UpdateInformation();
+    ////gathered from vtkMetaImageReader::RequestInformation
+    reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+    reader->GetOutputInformation(0)->Get(vtkDataObject::SPACING(), spacing);
+    reader->GetOutputInformation(0)->Get(vtkDataObject::ORIGIN(), origin);
+    ////these only work after reader->Update() !!!
+    // reader->GetOutput()->GetExtent(extent);
+    // reader->GetOutput()->GetSpacing(spacing);
+    // reader->GetOutput()->GetOrigin(origin);
+
+    fprintf(stderr, "extent: %d, %d, %d, %d, %d, %d\n", extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
+    fprintf(stderr, "spacing: %f, %f, %f\n", spacing[0], spacing[1], spacing[2]);
+    fprintf(stderr, "origin: %f, %f, %f\n", origin[0], origin[1], origin[2]);
 
     VTK_CREATE(vtkPolyDataToImageStencil, polyToStencilFilter);
     polyToStencilFilter->SetInputConnection(cleanFilter->GetOutputPort());
-    polyToStencilFilter->SetOutputWholeExtent(reader->GetOutput()->GetExtent());
-    polyToStencilFilter->SetOutputSpacing(reader->GetOutput()->GetSpacing());
-    polyToStencilFilter->SetOutputOrigin(reader->GetOutput()->GetOrigin());
+    polyToStencilFilter->SetOutputWholeExtent(extent);
+    polyToStencilFilter->SetOutputSpacing(spacing);
+    polyToStencilFilter->SetOutputOrigin(origin);
     polyToStencilFilter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     polyToStencilFilter->Update();
 
