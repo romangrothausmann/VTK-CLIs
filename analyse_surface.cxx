@@ -1,12 +1,15 @@
-////program for
+////program to calculate the surface of a (labled) mesh
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
-#include <vtkXMLPolyDataWriter.h>
+#include <vtkXMLPolyDataReader.h>
+#include <vtkMeshQuality.h>
+#include <vtkPolyData.h>
+#include <vtkCellData.h>
+#include <vtkDoubleArray.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -40,22 +43,15 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 2){
         std::cerr << "Usage: " << argv[0]
                   << " input"
-                  << " output"
-                  << " compress"
                   << std::endl;
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The input should end with .mha or .mhd" << std::endl;
-        return -1;
-        }
-
-    if(!(strcasestr(argv[2],".vtp"))) {
-        std::cerr << "The output should end with .vtp" << std::endl;
+    if(!(strcasestr(argv[1],".vtp"))) {
+        std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -64,26 +60,26 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkMetaImageReader, reader);
+    VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
+    VTK_CREATE(vtkMeshQuality, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
+    filter->SetTriangleQualityMeasureToArea();
+    filter->SaveCellQualityOn();
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
-    VTK_CREATE(vtkXMLPolyDataWriter, writer);
-    writer->SetInputConnection(filter->GetOutputPort());
-    writer->SetFileName(argv[2]);
-    writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
-    if(atoi(argv[3]))
-        writer->SetCompressorTypeToZLib();//default
-    else
-        writer->SetCompressorTypeToNone();
-    writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    writer->Write();
+    vtkDoubleArray *areas= vtkDoubleArray::SafeDownCast(filter->GetOutput()->GetCellData()->GetArray("Quality"));
+
+    ////vtkMeshQuality has no sum (only min, max, avg) so calc it here:
+    double totalPolyDataArea= 0;
+    for(vtkIdType k= 0; k < reader->GetOutput()->GetNumberOfCells(); k++)
+        totalPolyDataArea+= areas->GetValue(k);
+
+    std::cout << "Total mesh surface area: " << totalPolyDataArea << std::endl;
 
     return EXIT_SUCCESS;
     }

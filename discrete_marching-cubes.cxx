@@ -79,6 +79,7 @@ int main (int argc, char *argv[]){
 	    extent[0] -1, extent[1] + 1,
 	    extent[2] -1, extent[3] + 1,
 	    extent[4] -1, extent[5] + 1);
+	pad->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 	pad->Update();
 	discreteCubes->SetInputConnection(pad->GetOutputPort());
 	}
