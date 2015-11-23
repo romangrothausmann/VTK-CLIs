@@ -1,8 +1,8 @@
 ////program to create a hull from a set of planes
 //01: based on template.cxx and FacetAnalyser.cxx
+//02: added not anti-aliased voxelizer
 
 ////ToDo
-// - extend with voxelization as e.g. in image-clipper
 
 
 
@@ -12,6 +12,12 @@
 #include <vtkHull.h>
 #include <vtkCleanPolyData.h>
 #include <vtkXMLPolyDataWriter.h>
+
+#include <vtkMetaImageReader.h>
+#include <vtkImageData.h>
+#include <vtkPolyDataToImageStencil.h>
+#include <vtkImageStencilToImage.h>
+#include <vtkMetaImageWriter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -45,17 +51,20 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc < 10){
+    if (argc < 13){
         std::cerr << "Usage: " << argv[0]
                   << " output"
                   << " compress"
                   << " as-is(0)|outer-hull(1)"
+                  << " voxelization-reference-image voxelization-output-image compress"
                   << " origin_x origin_y origin_z normal_x normal_y normal_z ..."
                   << std::endl
-                  << " NOTE: Normals do not have to be normalized."
+                  << " NOTE: Normals have to point \"outside\" but do not have to be normalized."
                   << std::endl;
         return EXIT_FAILURE;
         }
+
+    const int argOffset= 7;
 
     if(!(strcasestr(argv[1],".vtp"))) {
         std::cerr << "The output should end with .vtp" << std::endl;
@@ -70,7 +79,7 @@ int main (int argc, char *argv[]){
     vtkSmartPointer<vtkDoubleArray> normals= vtkSmartPointer<vtkDoubleArray>::New();
     normals->SetNumberOfComponents(3);
 
-    for(int i= 4; i < argc; i+=6){
+    for(int i= argOffset; i < argc; i+=6){
         points->InsertNextPoint(atof(argv[i+0]), atof(argv[i+1]), atof(argv[i+2]));
 
         double c[3];
@@ -128,6 +137,38 @@ int main (int argc, char *argv[]){
         writer->SetCompressorTypeToNone();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     writer->Write();
+
+
+    ////voxelization
+
+    VTK_CREATE(vtkMetaImageReader, reader);
+    reader->SetFileName(argv[4]);
+    reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    reader->Update();
+
+    VTK_CREATE(vtkPolyDataToImageStencil, polyToStencilFilter);
+    polyToStencilFilter->SetInputConnection(cleanFilter->GetOutputPort());
+    polyToStencilFilter->SetOutputWholeExtent(reader->GetOutput()->GetExtent());
+    polyToStencilFilter->SetOutputSpacing(reader->GetOutput()->GetSpacing());
+    polyToStencilFilter->SetOutputOrigin(reader->GetOutput()->GetOrigin());
+    polyToStencilFilter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    polyToStencilFilter->Update();
+
+    //// create a binary image from the stencil
+    VTK_CREATE(vtkImageStencilToImage, stencil2img);
+    stencil2img->SetInputConnection(polyToStencilFilter->GetOutputPort()); //vtk-6.x
+    stencil2img->SetOutsideValue(0);
+    stencil2img->SetInsideValue(255);
+    stencil2img->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    stencil2img->Update();
+
+    VTK_CREATE(vtkMetaImageWriter, writer2);
+    writer2->SetInputConnection(stencil2img->GetOutputPort());
+    writer2->SetFileName(argv[5]);
+    writer2->SetFileDimensionality(3);
+    writer2->SetCompression(atoi(argv[6]));
+    writer2->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    writer2->Write();
 
     return EXIT_SUCCESS;
     }
