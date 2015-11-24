@@ -1,11 +1,15 @@
-////program for
+////program for vtkThreshold
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
+#include <vtkDataObject.h>
+#include <vtkDataSetAttributes.h>
+#include <vtkXMLPolyDataReader.h>
+#include <vtkThreshold.h>
+#include <vtkGeometryFilter.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,17 +44,28 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 9){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
+                  << " field attribute start end"
+                  << " AllScalars"
                   << std::endl;
+
+        std::cerr << "vtkDataObject field associations:" << std::endl;
+        for (int i=0; i<vtkDataObject::NUMBER_OF_ASSOCIATIONS; i++)
+            fprintf(stderr, "%d: %s\n", i, vtkDataObject::GetAssociationTypeAsString(i));
+
+        std::cerr << "vtkDataSet attributes:" << std::endl;
+        for (int i=0; i<vtkDataSetAttributes::NUM_ATTRIBUTES; i++)
+            fprintf(stderr, "%d: %s\n", i, vtkDataSetAttributes::GetLongAttributeTypeAsString(i));
+
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The input should end with .mha or .mhd" << std::endl;
+    if(!(strcasestr(argv[1],".vtp"))) {
+        std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -64,18 +79,25 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkMetaImageReader, reader);
+    VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
+    VTK_CREATE(vtkThreshold, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
+    filter->SetInputArrayToProcess(0, 0, 0, atoi(argv[4]), atoi(argv[5]));
+    filter->ThresholdBetween(atof(argv[6]), atof(argv[7]));
+    filter->SetAllScalars(atoi(argv[8]));
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
+    VTK_CREATE(vtkGeometryFilter, vtu2vtp);
+    vtu2vtp->SetInputConnection(filter->GetOutputPort());
+    vtu2vtp->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
-    writer->SetInputConnection(filter->GetOutputPort());
+    writer->SetInputConnection(vtu2vtp->GetOutputPort());
     writer->SetFileName(argv[2]);
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
     if(atoi(argv[3]))
