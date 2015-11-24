@@ -26,13 +26,13 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
     vtkAlgorithm *filter= static_cast<vtkAlgorithm*>(caller);
 
     switch(eventId){
-	case vtkCommand::ProgressEvent:
-	    fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetClassName(), 100.0 * filter->GetProgress());//stderr is flushed directly
-	    break;
-	case vtkCommand::EndEvent:
-	    std::cerr << std::endl << std::flush;   
-	    break;
-	}
+        case vtkCommand::ProgressEvent:
+            fprintf(stderr, "\r%s progress: %5.1f%%", filter->GetClassName(), 100.0 * filter->GetProgress());//stderr is flushed directly
+            break;
+        case vtkCommand::EndEvent:
+            std::cerr << std::endl << std::flush;
+            break;
+        }
     }
 
 
@@ -40,17 +40,17 @@ int main (int argc, char *argv[]){
     int myId, numProcs;
 
     if (argc != 6){
-	std::cerr << "Usage: " << argv[0]
-		  << " input"
-		  << " output"
-		  << " StartLabel EndLabel"
-		  << " cap-surface"
-		  << std::endl;
-	return EXIT_FAILURE;
-	}
+        std::cerr << "Usage: " << argv[0]
+                  << " input"
+                  << " output"
+                  << " StartLabel EndLabel"
+                  << " cap-surface"
+                  << std::endl;
+        return EXIT_FAILURE;
+        }
 
     vtkSmartPointer<vtkMPIController> controller =
-	vtkSmartPointer<vtkMPIController>::New();
+        vtkSmartPointer<vtkMPIController>::New();
     controller->Initialize(&argc, &argv);
 
     // Obtain the id of the running process and the total
@@ -60,17 +60,17 @@ int main (int argc, char *argv[]){
 
     // Create all of the classes we will need
     vtkSmartPointer<vtkXMLImageDataReader> reader =
-	vtkSmartPointer<vtkXMLImageDataReader>::New();
+        vtkSmartPointer<vtkXMLImageDataReader>::New();
     vtkSmartPointer<vtkDiscreteMarchingCubes> discreteCubes =
-	vtkSmartPointer<vtkDiscreteMarchingCubes>::New();
+        vtkSmartPointer<vtkDiscreteMarchingCubes>::New();
     vtkSmartPointer<vtkWindowedSincPolyDataFilter> smoother =
-	vtkSmartPointer<vtkWindowedSincPolyDataFilter>::New();
+        vtkSmartPointer<vtkWindowedSincPolyDataFilter>::New();
     vtkSmartPointer<vtkImageConstantPad> pad =
         vtkSmartPointer<vtkImageConstantPad>::New();
     vtkSmartPointer<vtkFeatureEdges> featureEdges =
         vtkSmartPointer<vtkFeatureEdges>::New();
     vtkSmartPointer<vtkXMLPPolyDataWriter> writer =
-	vtkSmartPointer<vtkXMLPPolyDataWriter>::New();
+        vtkSmartPointer<vtkXMLPPolyDataWriter>::New();
 
     vtkSmartPointer<vtkCallbackCommand> eventCallbackVTK = vtkSmartPointer<vtkCallbackCommand>::New();
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
@@ -87,31 +87,31 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     if(atoi(argv[5])){
-	int extent[6];
-	reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+        int extent[6];
+        reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
 
-	fprintf(stderr, "extent: %d, %d, %d, %d, %d, %d\n", extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
+        fprintf(stderr, "extent: %d, %d, %d, %d, %d, %d\n", extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
 
-	pad->SetInputConnection(reader->GetOutputPort());
-	pad->SetOutputWholeExtent(
-	    extent[0] -1, extent[1] + 1,
-	    extent[2] -1, extent[3] + 1,
-	    extent[4] -1, extent[5] + 1);
-	discreteCubes->SetInputConnection(pad->GetOutputPort());
-	}
+        pad->SetInputConnection(reader->GetOutputPort());
+        pad->SetOutputWholeExtent(
+            extent[0] -1, extent[1] + 1,
+            extent[2] -1, extent[3] + 1,
+            extent[4] -1, extent[5] + 1);
+        discreteCubes->SetInputConnection(pad->GetOutputPort());
+        }
     else
-	discreteCubes->SetInputConnection(reader->GetOutputPort());
+        discreteCubes->SetInputConnection(reader->GetOutputPort());
 
     discreteCubes->GenerateValues(
-	endLabel - startLabel + 1, startLabel, endLabel);
+        endLabel - startLabel + 1, startLabel, endLabel);
     discreteCubes->UpdateInformation();
     discreteCubes->SetUpdateExtent(0, myId, numProcs, 0);
     discreteCubes->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     discreteCubes->Update();//essential to SetUpdateExtent before on same filter
 
     vtkIdType numCells = discreteCubes->GetOutput()->GetNumberOfCells();
-    cerr << "Process (" << myId << "): " 
-	 << "# cells: " << numCells << endl;
+    cerr << "Process (" << myId << "): "
+         << "# cells: " << numCells << endl;
 
     writer->SetNumberOfPieces(numProcs);
     writer->SetStartPiece(myId);
@@ -135,8 +135,8 @@ int main (int argc, char *argv[]){
     smoother->Update();//essential to SetUpdateExtent before on same filter
 
     numCells = smoother->GetOutput()->GetNumberOfCells();
-    cerr << "Process (" << myId << "): " 
-	 << "# cells: " << numCells << endl;
+    cerr << "Process (" << myId << "): "
+         << "# cells: " << numCells << endl;
 
     vtksys_stl::stringstream ss;
     ss << filePrefix << "_sws.pvtp";
@@ -148,8 +148,8 @@ int main (int argc, char *argv[]){
     vtkIdType totalNumCells = 0;
     controller->Reduce(&numCells, &totalNumCells, 1, vtkCommunicator::SUM_OP, 0);
     if (myId == 0)
-	cerr << endl << "Process (" << myId << "): " 
-	     << "Cell count after reduction: " << totalNumCells << endl;
+        cerr << endl << "Process (" << myId << "): "
+             << "Cell count after reduction: " << totalNumCells << endl;
 
     controller->Finalize();
 
