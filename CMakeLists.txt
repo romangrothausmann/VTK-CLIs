@@ -59,6 +59,9 @@ SET(Libraries
   ${VTK_LIBRARIES}
 )
 
+find_package(OpenGL)
+find_package(GLUT)
+
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
@@ -100,11 +103,13 @@ ADD_EXECUTABLE(${CurrentExe}
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
+IF(OpenGL_FOUND)
 SET(CurrentExe "probe-surf2vrml")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "-lglut -lGL")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+ENDIF(OpenGL_FOUND)
 
 SET(CurrentExe "pvtp2vtp")
 ADD_EXECUTABLE(${CurrentExe}
