@@ -6,6 +6,8 @@
 //         .vti, .vto
 //
 #include <vtkSmartPointer.h>
+#include <vtkInformation.h>//for GetOutputInformation
+#include <vtkStreamingDemandDrivenPipeline.h>//for extent
 #include <vtkXMLReader.h>
 #include <vtkXMLUnstructuredGridReader.h>
 #include <vtkXMLPolyDataReader.h>
@@ -36,7 +38,15 @@ template<class TReader> vtkDataSet *ReadAnXMLFile(const char*fileName)
   vtkSmartPointer<TReader> reader =
     vtkSmartPointer<TReader>::New();
   reader->SetFileName(fileName);
+
+  reader->UpdateInformation();//insufficient to get array names
+  int extent[6]={-1,-1,-1,-1,-1,-1};
+  reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+  fprintf(stderr, "extent: %d, %d, %d, %d, %d, %d\n", extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
+
   reader->Update();
+  // reader->GetOutput()->GetExtent(extent);//vtkUnstructuredGrid, vtkPolyData, vtkHyperOctree and vtkDataSet don't have GetExtent!
+  // fprintf(stderr, "extent: %d, %d, %d, %d, %d, %d\n", extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
   reader->GetOutput()->Register(reader);
   return vtkDataSet::SafeDownCast(reader->GetOutput());
 }
