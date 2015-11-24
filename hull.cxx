@@ -14,7 +14,7 @@
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkMetaImageReader.h>
-#include <vtkInformation.h>//for UpdateInformation
+#include <vtkInformation.h>//for GetOutputInformation
 #include <vtkStreamingDemandDrivenPipeline.h>//for extent
 #include <vtkPolyDataToImageStencil.h>
 #include <vtkImageStencilToImage.h>

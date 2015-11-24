@@ -6,6 +6,8 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkMetaImageReader.h>
+#include <vtkInformation.h>//for GetOutputInformation
+#include <vtkStreamingDemandDrivenPipeline.h>//for extent
 #include <vtkImageData.h>//for GetExtent()
 #include <vtkImageConstantPad.h>
 #include "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.h"
@@ -73,7 +75,11 @@ int main (int argc, char *argv[]){
     reader->Update();
 
     if(atoi(argv[5])){
-	int *extent = reader->GetOutput()->GetExtent(); //needs vtkImageData.h
+	int extent[6];
+	reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+
+	fprintf(stderr, "extent: %d, %d, %d, %d, %d, %d\n", extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
+
 	pad->SetInputConnection(reader->GetOutputPort());
 	pad->SetOutputWholeExtent(
 	    extent[0] -1, extent[1] + 1,
