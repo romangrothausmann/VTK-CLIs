@@ -102,7 +102,7 @@ int main (int argc, char *argv[]){
 
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
-    vtksys_stl::stringstream ss2;
+    std::stringstream ss2;
     ss2 << filePrefix << "_raw.vtp";
 
     writer->SetInputConnection(discreteCubes->GetOutputPort());
@@ -117,7 +117,7 @@ int main (int argc, char *argv[]){
     smoother->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     smoother->Update();
 
-    vtksys_stl::stringstream ss;
+    std::stringstream ss;
     ss << filePrefix << "_sws.vtp";
 
     writer->SetInputConnection(smoother->GetOutputPort());

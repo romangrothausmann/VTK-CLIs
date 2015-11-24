@@ -103,7 +103,7 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 SET(CurrentExe "probe-surf2vrml")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "-lglut -lGL")
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "pvtp2vtp")
