@@ -96,7 +96,7 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "discrete_marching-cubes_MPI")
 ADD_EXECUTABLE(${CurrentExe}
-  ${CurrentExe})
+  ${CurrentExe} "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.cxx")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 

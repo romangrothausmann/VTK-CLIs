@@ -12,7 +12,7 @@
 #include <vtkStreamingDemandDrivenPipeline.h>//for extent
 #include <vtkImageData.h>//for GetExtent()
 #include <vtkImageConstantPad.h>
-#include <vtkDiscreteMarchingCubes.h>
+#include "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.h"
 #include <vtkWindowedSincPolyDataFilter.h>
 #include <vtkXMLPPolyDataWriter.h>
 #include <vtkFeatureEdges.h>
@@ -104,6 +104,7 @@ int main (int argc, char *argv[]){
 
     discreteCubes->GenerateValues(
         endLabel - startLabel + 1, startLabel, endLabel);
+    discreteCubes->ComputeNeighboursOn();//expecting own extension to vtkDiscreteMarchingCubes
     discreteCubes->UpdateInformation();
     discreteCubes->SetUpdateExtent(0, myId, numProcs, 0);
     discreteCubes->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
