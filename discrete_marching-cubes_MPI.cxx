@@ -82,6 +82,7 @@ int main (int argc, char *argv[]){
 
     reader->SetFileName(argv[1]);
     reader->UpdateInformation();
+    reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     if(atoi(argv[5])){
 	int *extent = reader->GetOutput()->GetExtent(); //needs vtkImageData.h
@@ -100,12 +101,12 @@ int main (int argc, char *argv[]){
 	endLabel - startLabel + 1, startLabel, endLabel);
     discreteCubes->UpdateInformation();
     discreteCubes->SetUpdateExtent(0, myId, numProcs, 0);
-    discreteCubes->Update();
+    discreteCubes->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    discreteCubes->Update();//essential to SetUpdateExtent before on same filter
 
     vtkIdType numCells = discreteCubes->GetOutput()->GetNumberOfCells();
     cerr << "Process (" << myId << "): " 
-	 << "Cells in output of contour on process after requesting"
-	" 1 piece from " << numProcs << " pieces: " << numCells << endl;
+	 << "# cells: " << numCells << endl;
 
     vtkIdType totalNumCells = 0;
     controller->Reduce(&numCells, &totalNumCells, 1, vtkCommunicator::SUM_OP, 0);
@@ -123,6 +124,26 @@ int main (int argc, char *argv[]){
 
     writer->SetInputConnection(discreteCubes->GetOutputPort());
     writer->SetFileName(ss2.str().c_str());
+    writer->Write();
+
+    smoother->SetInputConnection(discreteCubes->GetOutputPort());
+    smoother->SetNumberOfIterations(smoothingIterations);
+    smoother->NonManifoldSmoothingOn();
+    smoother->NormalizeCoordinatesOn();
+    smoother->UpdateInformation();
+    smoother->SetUpdateExtent(0, myId, numProcs, 0);
+    smoother->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    smoother->Update();//essential to SetUpdateExtent before on same filter
+
+    numCells = smoother->GetOutput()->GetNumberOfCells();
+    cerr << "Process (" << myId << "): " 
+	 << "# cells: " << numCells << endl;
+
+    vtksys_stl::stringstream ss;
+    ss << filePrefix << "_sws.pvtp";
+
+    writer->SetInputConnection(smoother->GetOutputPort());
+    writer->SetFileName(ss.str().c_str());
     writer->Write();
 
     controller->Finalize();
