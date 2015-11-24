@@ -27,12 +27,12 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
         std::cerr << std::endl << std::flush;
         break;
 
-    //// VTK does not throw errors (http://public.kitware.com/pipermail/vtkusers/2009-February/050805.html) use Error-Events: http://www.cmake.org/Wiki/VTK/Examples/Cxx/Utilities/ObserveError
+        //// VTK does not throw errors (http://public.kitware.com/pipermail/vtkusers/2009-February/050805.html) use Error-Events: http://www.cmake.org/Wiki/VTK/Examples/Cxx/Utilities/ObserveError
     case vtkCommand::ErrorEvent:
         std::cerr << "Error: " << static_cast<char*>(callData) << std::endl << std::flush;
         break;
     case vtkCommand::WarningEvent:
-            std::cerr << "Warning: " << static_cast<char*>(callData) << std::endl << std::flush;
+        std::cerr << "Warning: " << static_cast<char*>(callData) << std::endl << std::flush;
         break;
         }
     }
