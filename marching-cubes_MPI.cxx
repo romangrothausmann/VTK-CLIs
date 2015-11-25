@@ -7,6 +7,10 @@
 #include <vtkSmartPointer.h>
 #include <vtkMPIController.h>
 #include <vtkXMLImageDataReader.h>//seems to be the only reader that works, has outInfo->Set(CAN_PRODUCE_SUB_EXTENT(), 1)  neither vtkMetaImageReader nor vtkPNrrdReader worked, vtkMPIImageReader (RAW) not tested
+#include <vtkInformation.h>//for GetOutputInformation
+#include <vtkStreamingDemandDrivenPipeline.h>//for extent
+#include <vtkImageData.h>//for GetExtent()
+#include <vtkImageConstantPad.h>
 #include <vtkContourFilter.h>//handles sub-extents of pvtp correctly, seems independent of vtkMarchingCubes (which does not handle sub-extents of pvtp correctly)
 #include <vtkXMLPPolyDataWriter.h>
 
@@ -39,12 +43,13 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 5){
+    if (argc != 6){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
                   << " iso-value"
+                  << " cap-surface"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -71,10 +76,30 @@ int main (int argc, char *argv[]){
     vtkSmartPointer<vtkXMLImageDataReader> reader= vtkSmartPointer<vtkXMLImageDataReader>::New();
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    //reader->UpdateInformation();//not needed
+    reader->UpdateInformation();//needed to get extent
 
     vtkSmartPointer<vtkContourFilter> filter= vtkSmartPointer<vtkContourFilter>::New();
-    filter->SetInputConnection(reader->GetOutputPort());
+    vtkSmartPointer<vtkImageConstantPad> pad = vtkSmartPointer<vtkImageConstantPad>::New();
+
+    if(atoi(argv[5])){
+        int extent[6];
+        reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+
+        fprintf(stderr, "extent: %d, %d, %d, %d, %d, %d\n", extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
+
+        pad->SetInputConnection(reader->GetOutputPort());
+        pad->SetOutputWholeExtent(
+            extent[0] -1, extent[1] + 1,
+            extent[2] -1, extent[3] + 1,
+            extent[4] -1, extent[5] + 1);
+	pad->UpdateInformation();
+	pad->SetUpdateExtent(0, myId, numProcs, 0);
+	//pad->Update();
+        filter->SetInputConnection(pad->GetOutputPort());
+        }
+    else
+	filter->SetInputConnection(reader->GetOutputPort());
+
     filter->SetValue(0, atof(argv[4]));
     filter->ComputeScalarsOff();
     filter->ComputeGradientsOff();
