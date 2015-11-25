@@ -84,6 +84,8 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
+    std::cerr << "Verts: " << +reader->GetOutput()->GetNumberOfPoints() << " Cells: " << +reader->GetOutput()->GetNumberOfCells() << std::endl;
+
     VTK_CREATE(vtkThreshold, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
     filter->SetInputArrayToProcess(0, 0, 0, atoi(argv[4]), atoi(argv[5]));
@@ -95,6 +97,9 @@ int main (int argc, char *argv[]){
     VTK_CREATE(vtkGeometryFilter, vtu2vtp);
     vtu2vtp->SetInputConnection(filter->GetOutputPort());
     vtu2vtp->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    vtu2vtp->Update();
+
+    std::cerr << "Verts: " << +vtu2vtp->GetOutput()->GetNumberOfPoints() << " Cells: " << +vtu2vtp->GetOutput()->GetNumberOfCells() << std::endl;
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(vtu2vtp->GetOutputPort());
