@@ -7,7 +7,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkMPIController.h>
 #include <vtkXMLImageDataReader.h>//seems to be the only reader that works, has outInfo->Set(CAN_PRODUCE_SUB_EXTENT(), 1)  neither vtkMetaImageReader nor vtkPNrrdReader worked, vtkMPIImageReader (RAW) not tested
-#include <vtkContourFilter.h>
+#include <vtkContourFilter.h>//handles sub-extents of pvtp correctly, seems independent of vtkMarchingCubes (which does not handle sub-extents of pvtp correctly)
 #include <vtkXMLPPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -83,6 +83,12 @@ int main (int argc, char *argv[]){
     filter->SetUpdateExtent(0, myId, numProcs, 0);
     filter->Update();
 
+    vtkIdType numCells = filter->GetOutput()->GetNumberOfCells();
+    vtkIdType numPoints = filter->GetOutput()->GetNumberOfPoints();
+    cerr << "Process (" << myId << "): "
+	 << "# points: " << numPoints
+         << "# cells: " << numCells << endl;
+
     vtkSmartPointer<vtkXMLPPolyDataWriter> writer= vtkSmartPointer<vtkXMLPPolyDataWriter>::New();
     writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[2]);
@@ -96,6 +102,15 @@ int main (int argc, char *argv[]){
         writer->SetCompressorTypeToNone();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     writer->Write();
+
+    vtkIdType totalNumPoints = 0;
+    vtkIdType totalNumCells = 0;
+    controller->Reduce(&numPoints, &totalNumPoints, 1, vtkCommunicator::SUM_OP, 0);//does this stop thread 0 until totalNumCells is fully acquired? If so should only be used after all processing is done!
+    controller->Reduce(&numCells, &totalNumCells, 1, vtkCommunicator::SUM_OP, 0);//does this stop thread 0 until totalNumCells is fully acquired? If so should only be used after all processing is done!
+    if (myId == 0)
+        cerr << endl << "Process (" << myId << ") total: "
+	     << "# points: " << totalNumPoints
+             << "# cells: " << totalNumCells << endl;
 
     controller->Finalize();
 

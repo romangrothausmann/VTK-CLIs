@@ -12,7 +12,7 @@
 #include <vtkStreamingDemandDrivenPipeline.h>//for extent
 #include <vtkImageData.h>//for GetExtent()
 #include <vtkImageConstantPad.h>
-#include "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.h"
+#include "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.h"//does not handle sub-extents of pvtp correctly, nor does vtkMarchingCubes but vtkContourFilter does (seems to be independent of vtkMarchingCubes)
 #include <vtkWindowedSincPolyDataFilter.h>
 #include <vtkXMLPPolyDataWriter.h>
 #include <vtkFeatureEdges.h>
@@ -111,7 +111,9 @@ int main (int argc, char *argv[]){
     discreteCubes->Update();//essential to SetUpdateExtent before on same filter
 
     vtkIdType numCells = discreteCubes->GetOutput()->GetNumberOfCells();
+    vtkIdType numPoints = discreteCubes->GetOutput()->GetNumberOfPoints();
     cerr << "Process (" << myId << "): "
+	 << "# points: " << numPoints
          << "# cells: " << numCells << endl;
 
     writer->SetNumberOfPieces(numProcs);
@@ -136,7 +138,9 @@ int main (int argc, char *argv[]){
     smoother->Update();//essential to SetUpdateExtent before on same filter
 
     numCells = smoother->GetOutput()->GetNumberOfCells();
+    numPoints = smoother->GetOutput()->GetNumberOfPoints();
     cerr << "Process (" << myId << "): "
+	 << "# points: " << numPoints
          << "# cells: " << numCells << endl;
 
     std::stringstream ss;
@@ -146,11 +150,14 @@ int main (int argc, char *argv[]){
     writer->SetFileName(ss.str().c_str());
     writer->Write();
 
+    vtkIdType totalNumPoints = 0;
     vtkIdType totalNumCells = 0;
-    controller->Reduce(&numCells, &totalNumCells, 1, vtkCommunicator::SUM_OP, 0);
+    controller->Reduce(&numPoints, &totalNumPoints, 1, vtkCommunicator::SUM_OP, 0);//does this stop thread 0 until totalNumCells is fully acquired? If so should only be used after all processing is done!
+    controller->Reduce(&numCells, &totalNumCells, 1, vtkCommunicator::SUM_OP, 0);//does this stop thread 0 until totalNumCells is fully acquired? If so should only be used after all processing is done!
     if (myId == 0)
-        cerr << endl << "Process (" << myId << "): "
-             << "Cell count after reduction: " << totalNumCells << endl;
+        cerr << endl << "Process (" << myId << ") total: "
+	     << "# points: " << totalNumPoints
+             << "# cells: " << totalNumCells << endl;
 
     controller->Finalize();
 
