@@ -1,12 +1,13 @@
-////program for
+////program to test streamed reading of a VTP-file
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
-#include <vtkXMLPolyDataWriter.h>
+#include <vtkXMLPolyDataReader.h>
+#include <vtkStreamingDemandDrivenPipeline.h>
+#include <vtkPolyData.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -40,22 +41,16 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 3){
         std::cerr << "Usage: " << argv[0]
                   << " input"
-                  << " output"
-                  << " compress"
+                  << " chunks"
                   << std::endl;
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The input should end with .mha or .mhd" << std::endl;
-        return -1;
-        }
-
-    if(!(strcasestr(argv[2],".vtp"))) {
-        std::cerr << "The output should end with .vtp" << std::endl;
+    if(!(strcasestr(argv[1],".vtp"))) {
+        std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -64,26 +59,34 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkMetaImageReader, reader);
+    VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader->Update();
+    reader->UpdateInformation();
 
-    VTK_CREATE(, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
-    filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    filter->Update();
+    int numProcs= atoi(argv[2]);
+    vtkStreamingDemandDrivenPipeline* exec= vtkStreamingDemandDrivenPipeline::SafeDownCast(reader->GetExecutive());
+    // exec->SetUpdateNumberOfPieces(exec->GetOutputInformation(0), numProcs);
 
-    VTK_CREATE(vtkXMLPolyDataWriter, writer);
-    writer->SetInputConnection(filter->GetOutputPort());
-    writer->SetFileName(argv[2]);
-    writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
-    if(atoi(argv[3]))
-        writer->SetCompressorTypeToZLib();//default
-    else
-        writer->SetCompressorTypeToNone();
-    writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    writer->Write();
+    double totalPolyData= 0;
+    for(int myId= 0; myId < numProcs; myId++){
+        // reader->SetUpdateExtent(0, myId, numProcs, 0);
+        // reader->Update();
+
+        // exec->SetUpdatePiece(exec->GetOutputInformation(0), myId);
+        // exec->Update();
+
+        exec->SetUpdateExtent(0, myId, numProcs, 0);
+        reader->Update();
+        //exec->Update();
+
+        double subtotalPolyData= reader->GetOutput()->GetNumberOfCells();
+        totalPolyData+= subtotalPolyData;
+
+        fprintf(stderr, "%5.1f%% (%d/%d): sub-total cells: %f; accumulated total cells: %f\n", myId*100.0/numProcs, myId, numProcs, subtotalPolyData, totalPolyData);
+        }
+
+    std::cout << "Total mesh cells: " << totalPolyData << std::endl;
 
     return EXIT_SUCCESS;
     }
