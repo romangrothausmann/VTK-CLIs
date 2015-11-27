@@ -1,15 +1,12 @@
 ////program to calculate the surface of a (labled) mesh
 //01: based on template.cxx
-
-
+//02: changed to vtkMassProperties, works even for open surfaces (code for surface area seems not to relate on closeness assumption); slightly slower than former version based on vtkMeshQuality
 
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
-#include <vtkMeshQuality.h>
-#include <vtkPolyData.h>
-#include <vtkCellData.h>
-#include <vtkDoubleArray.h>
+#include <vtkTriangleFilter.h>
+#include <vtkMassProperties.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -47,6 +44,8 @@ int main (int argc, char *argv[]){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << std::endl;
+        std::cerr << "Value calculation based on the discrete form of the divergence theorem." << std::endl;
+        std::cerr << "Apart from the surface area, the calculations assume a closed mesh!" << std::endl;
         return EXIT_FAILURE;
         }
 
@@ -65,21 +64,23 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(vtkMeshQuality, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
-    filter->SetTriangleQualityMeasureToArea();
-    filter->SaveCellQualityOn();
+    VTK_CREATE(vtkTriangleFilter, triangle);
+    triangle->SetInputConnection(reader->GetOutputPort());
+
+    VTK_CREATE(vtkMassProperties, filter);
+    filter->SetInputConnection(triangle->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
-    vtkDoubleArray *areas= vtkDoubleArray::SafeDownCast(filter->GetOutput()->GetCellData()->GetArray("Quality"));
+    std::cout << "#index\tV\tS\tnSI" << std::endl;
 
-    ////vtkMeshQuality has no sum (only min, max, avg) so calc it here:
-    double totalPolyDataArea= 0;
-    for(vtkIdType k= 0; k < reader->GetOutput()->GetNumberOfCells(); k++)
-        totalPolyDataArea+= areas->GetValue(k);
+    std::cout
+            << 0 << "\t"
+            << filter->GetVolume() << "\t"
+            << filter->GetSurfaceArea() << "\t"
+            << filter->GetNormalizedShapeIndex()
+	    << std::endl;
 
-    std::cout << "Total mesh surface area: " << totalPolyDataArea << std::endl;
 
     return EXIT_SUCCESS;
     }
