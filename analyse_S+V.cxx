@@ -6,6 +6,11 @@
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkTriangleFilter.h>
+#include <vtkThreshold.h>
+#include <vtkGeometryFilter.h>
+#include <vtkCellData.h>//GetCellData()
+#include <vtkDataArray.h>//GetScalars()
+#include <vtkDataSetAttributes.h>//GetRange()
 #include <vtkMassProperties.h>
 
 #include <vtkCallbackCommand.h>
@@ -66,21 +71,61 @@ int main (int argc, char *argv[]){
 
     VTK_CREATE(vtkTriangleFilter, triangle);
     triangle->SetInputConnection(reader->GetOutputPort());
+    triangle->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    triangle->Update();
+
+    VTK_CREATE(vtkThreshold, thr);
+    thr->SetInputConnection(0, triangle->GetOutputPort());
+    thr->SetInputArrayToProcess(0, 0, 0,         
+	vtkDataObject::FIELD_ASSOCIATION_CELLS,
+        vtkDataSetAttributes::SCALARS);
+    thr->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
+    VTK_CREATE(vtkGeometryFilter, vtu2vtp);
+    vtu2vtp->SetInputConnection(thr->GetOutputPort());
+    vtu2vtp->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     VTK_CREATE(vtkMassProperties, filter);
-    filter->SetInputConnection(triangle->GetOutputPort());
+    filter->SetInputConnection(vtu2vtp->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    filter->Update();
 
     std::cout << "#index\tV\tS\tnSI" << std::endl;
 
-    std::cout
-            << 0 << "\t"
-            << filter->GetVolume() << "\t"
-            << filter->GetSurfaceArea() << "\t"
-            << filter->GetNormalizedShapeIndex()
-	    << std::endl;
+    vtkDataArray* tmpArray= reader->GetOutput()->GetCellData()->GetScalars();
+    if(tmpArray){
+	double dRange[2];
+	tmpArray->GetRange(dRange);
+	int iRange[2];
+	iRange[0]= (int)dRange[0];
+	iRange[1]= (int)dRange[1];
 
+	fprintf(stderr, "range of cell scalars: %d - %d\n", iRange[0], iRange[1]);
+
+	for (unsigned int i= iRange[0]; i <= iRange[1]; i++){
+	    ////ToDo: insert check cell array if any scalar of i exist
+
+	    thr->ThresholdBetween(i, i);
+	    filter->Update();
+
+	    std::cout
+		<< i << "\t"
+		<< filter->GetVolume() << "\t"
+		<< filter->GetSurfaceArea() << "\t"
+		<< filter->GetNormalizedShapeIndex()
+		<< std::endl;
+	    }
+	}
+    else{
+	filter->SetInputConnection(triangle->GetOutputPort());
+	filter->Update();
+
+	std::cout
+	    << "\t"
+	    << filter->GetVolume() << "\t"
+	    << filter->GetSurfaceArea() << "\t"
+	    << filter->GetNormalizedShapeIndex()
+	    << std::endl;
+	}
 
     return EXIT_SUCCESS;
     }
