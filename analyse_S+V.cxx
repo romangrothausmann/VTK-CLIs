@@ -91,16 +91,17 @@ int main (int argc, char *argv[]){
 
     std::cout << "#index\tV\tS\tnSI" << std::endl;
 
+    int iRange[2];
     vtkDataArray* tmpArray= reader->GetOutput()->GetCellData()->GetScalars();
     if(tmpArray){
 	double dRange[2];
 	tmpArray->GetRange(dRange);
-	int iRange[2];
 	iRange[0]= (int)dRange[0];
 	iRange[1]= (int)dRange[1];
 
 	fprintf(stderr, "range of cell scalars: %d - %d\n", iRange[0], iRange[1]);
-
+	}
+    if(iRange[1]-iRange[0]){
 	for (unsigned int i= iRange[0]; i <= iRange[1]; i++){
 	    ////ToDo: insert check cell array if any scalar of i exist
 
@@ -120,7 +121,7 @@ int main (int argc, char *argv[]){
 	filter->Update();
 
 	std::cout
-	    << "\t"
+	    << "all" << "\t"
 	    << filter->GetVolume() << "\t"
 	    << filter->GetSurfaceArea() << "\t"
 	    << filter->GetNormalizedShapeIndex()
