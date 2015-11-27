@@ -44,6 +44,8 @@ int main (int argc, char *argv[]){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << std::endl;
+        std::cerr << "Value calculation based on the discrete form of the divergence theorem." << std::endl;
+        std::cerr << "Apart from the surface area, the calculations assume a closed mesh!" << std::endl;
         return EXIT_FAILURE;
         }
 
@@ -70,9 +72,15 @@ int main (int argc, char *argv[]){
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
-    double totalPolyDataArea= filter->GetSurfaceArea();
+    std::cout << "#index\tV\tS\tnSI" << std::endl;
 
-    std::cout << "Total mesh surface area: " << totalPolyDataArea << std::endl;
+    std::cout
+            << 0 << "\t"
+            << filter->GetVolume() << "\t"
+            << filter->GetSurfaceArea() << "\t"
+            << filter->GetNormalizedShapeIndex()
+	    << std::endl;
+
 
     return EXIT_SUCCESS;
     }
