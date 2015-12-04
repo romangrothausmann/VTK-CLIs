@@ -44,12 +44,13 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 5){
+    if (argc != 6){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
                   << " width"
+                  << " angle"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -76,15 +77,15 @@ int main (int argc, char *argv[]){
 
     VTK_CREATE(vtkFrenetSerretFrame, FSFrame);
     FSFrame->SetInputConnection(0, reader->GetOutputPort());
-    FSFrame->ComputeBinormalOn();
+    FSFrame->ComputeBinormalOff();
     // FSFrame->SetViewUp();
 
     VTK_CREATE(vtkRibbonFilter, filter);
     filter->SetInputConnection(0, FSFrame->GetOutputPort());
-    filter->SetInputArrayToProcess(1, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, "FSBinormals");//normals are expected on index 1, (index 0 is for scalars) l 138 vtkRibbonFilter.cxx
+    filter->SetInputArrayToProcess(1, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, "FSNormals");//normals are expected on index 1, (index 0 is for scalars) l 138 vtkRibbonFilter.cxx
     filter->SetWidth(atof(argv[4]));
-    filter->SetAngle(0);
-    filter->SetGenerateTCoordsToNormalizedLength();//normalized: t in [0;1] (same as s below)
+    filter->SetAngle(atof(argv[5]));
+    filter->SetGenerateTCoordsToNormalizedLength();//normalized: s in [0;1] (same as t below)
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
@@ -95,9 +96,9 @@ int main (int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    //// vtkRibbonFilter only produces t-coors, as points alternate on each side just use mod(2) to genterate s-coords ;-)
+    //// vtkRibbonFilter only produces s-coords, as points alternate on each side just use mod(2) to genterate t-coords ;-)
     for(vtkIdType i= 0; i < filter->GetOutput()->GetNumberOfPoints(); i++)
-	TCoords->SetTuple2(i, (double)((i+1) % 2), 1 - TCoords->GetTuple2(i)[0]); //i+1 and 1- needed to "invert" TCoords
+	TCoords->SetTuple2(i, TCoords->GetTuple2(i)[0], (double)(i % 2)); //adjust texture image to fit this TCoord
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
