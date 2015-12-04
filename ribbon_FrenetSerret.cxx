@@ -1,11 +1,15 @@
-////program for
+////program to create a ribbon of a path using vtkFrenetSerretFrame
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
+#include <vtkXMLPolyDataReader.h>
+#include "vtkFrenetSerretFrame.h"
+#include <vtkRibbonFilter.h>
+#include <vtkPointData.h>
+#include <vtkFloatArray.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,17 +44,18 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 5){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
+                  << " width"
                   << std::endl;
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The input should end with .mha or .mhd" << std::endl;
+    if(!(strcasestr(argv[1],".vtp"))) {
+        std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -64,15 +69,35 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkMetaImageReader, reader);
+    VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
+    VTK_CREATE(vtkFrenetSerretFrame, FSFrame);
+    FSFrame->SetInputConnection(0, reader->GetOutputPort());
+    FSFrame->ComputeBinormalOn();
+    // FSFrame->SetViewUp();
+
+    VTK_CREATE(vtkRibbonFilter, filter);
+    filter->SetInputConnection(0, FSFrame->GetOutputPort());
+    filter->SetInputArrayToProcess(1, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, "FSBinormals");//normals are expected on index 1, (index 0 is for scalars) l 138 vtkRibbonFilter.cxx
+    filter->SetWidth(atof(argv[4]));
+    filter->SetAngle(0);
+    filter->SetGenerateTCoordsToNormalizedLength();//normalized: t in [0;1] (same as s below)
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
+
+    vtkFloatArray* TCoords= vtkFloatArray::SafeDownCast(filter->GetOutput()->GetPointData()->GetTCoords());
+
+    if(!TCoords){
+	std::cerr << "TCoords missing!" << std::endl;
+        return EXIT_FAILURE;
+        }
+
+    //// vtkRibbonFilter only produces t-coors, as points alternate on each side just use mod(2) to genterate s-coords ;-)
+    for(vtkIdType i= 0; i < filter->GetOutput()->GetNumberOfPoints(); i++)
+	TCoords->SetTuple2(i, (double)((i+1) % 2), 1 - TCoords->GetTuple2(i)[0]); //i+1 and 1- needed to "invert" TCoords
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());

@@ -62,6 +62,7 @@ SET(Libraries
   ${VTK_LIBRARIES}
 )
 
+SET(vtkSplineDrivenImageSlicer "filter/external/vtkSplineDrivenImageSlicer/Filters/")
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
@@ -168,5 +169,11 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 SET(CurrentExe "read_SDP")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "ribbon_FrenetSerret")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe} "${vtkSplineDrivenImageSlicer}/vtkFrenetSerretFrame.cxx")
+TARGET_INCLUDE_DIRECTORIES(${CurrentExe} PRIVATE "${vtkSplineDrivenImageSlicer}")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
