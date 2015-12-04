@@ -1,3 +1,6 @@
 [submodule "filter/external/VTK-GraphConversions"]
 	path = filter/external/VTK-GraphConversions
 	url = https://github.com/romangrothausmann/VTK-GraphConversions.git
+[submodule "filter/external/vtkSplineDrivenImageSlicer"]
+	path = filter/external/vtkSplineDrivenImageSlicer
+	url = https://romangrothausmann@github.com/romangrothausmann/SplineDrivenImageSlicer.git
