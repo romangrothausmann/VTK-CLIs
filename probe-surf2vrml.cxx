@@ -5,7 +5,8 @@
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
+#include <vtkImageReader2Factory.h>
+#include <vtkImageReader2.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkProbeFilter.h>
 #include <vtkColorTransferFunction.h>
@@ -78,10 +79,15 @@ int main (int argc, char *argv[]){
     reader0->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader0->Update();
 
-    vtkSmartPointer<vtkMetaImageReader> reader1= vtkSmartPointer<vtkMetaImageReader>::New();
+    vtkSmartPointer<vtkImageReader2Factory> readerFactory= vtkSmartPointer<vtkImageReader2Factory>::New();    
+    vtkImageReader2* reader1= readerFactory->CreateImageReader2(argv[2]);
+    if(!reader1){
+        std::cerr << "Could not find an appropriate reader. Does file exist?" << std::endl;
+        return -1;
+        }	
     reader1->SetFileName(argv[2]);
     reader1->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader1->Update();
+    reader1->Update();//does not throw an error if file cannot be read! Use CanReadFile if readerFactory ought to be avoided
 
     vtkSmartPointer<vtkProbeFilter> filter= vtkSmartPointer<vtkProbeFilter>::New();
     filter->SetInputConnection(reader0->GetOutputPort());
