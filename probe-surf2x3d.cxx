@@ -17,7 +17,7 @@
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
-#include <vtkVRMLExporter.h>
+#include <vtkX3DExporter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -64,8 +64,8 @@ int main (int argc, char *argv[]){
         return -1;
         }
 
-    if(!(strcasestr(argv[3],".vrml") || strcasestr(argv[3],".wrl"))) {
-        std::cerr << "The output should end with .wrl or .vrml" << std::endl;
+    if(!(strcasestr(argv[3],".x3d"))) {
+        std::cerr << "The output should end with .x3d" << std::endl;
         return -1;
         }
 
@@ -139,12 +139,12 @@ int main (int argc, char *argv[]){
             std::cerr << "OpenGL context is indirect. Not rendering to prevent crashes of Xvnc when vglrun is used later on!" << std::endl;
         }
 
-    vtkSmartPointer<vtkVRMLExporter> writer= vtkSmartPointer<vtkVRMLExporter>::New();
+    vtkSmartPointer<vtkX3DExporter> writer= vtkSmartPointer<vtkX3DExporter>::New();
     writer->SetInput(renderWindow);
     writer->SetFileName(argv[3]);
     //writer->SetSpeed(5.5)//default 4
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    std::cerr << "VRML export... ";
+    std::cerr << "X3D export... ";
     writer->Write();
     std::cerr << "done." << std::endl;
 
