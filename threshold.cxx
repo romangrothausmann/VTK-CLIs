@@ -49,17 +49,13 @@ int main (int argc, char *argv[]){
                   << " input"
                   << " output"
                   << " compress"
-                  << " field attribute start end"
+                  << " field array-name start end"
                   << " AllScalars"
                   << std::endl;
 
         std::cerr << "vtkDataObject field associations:" << std::endl;
         for (int i=0; i<vtkDataObject::NUMBER_OF_ASSOCIATIONS; i++)
             fprintf(stderr, "%d: %s\n", i, vtkDataObject::GetAssociationTypeAsString(i));
-
-        std::cerr << "vtkDataSet attributes:" << std::endl;
-        for (int i=0; i<vtkDataSetAttributes::NUM_ATTRIBUTES; i++)
-            fprintf(stderr, "%d: %s\n", i, vtkDataSetAttributes::GetLongAttributeTypeAsString(i));
 
         return EXIT_FAILURE;
         }
@@ -88,11 +84,13 @@ int main (int argc, char *argv[]){
 
     VTK_CREATE(vtkThreshold, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
-    filter->SetInputArrayToProcess(0, 0, 0, atoi(argv[4]), atoi(argv[5]));
+    filter->SetInputArrayToProcess(0, 0, 0, atoi(argv[4]), argv[5]);
     filter->ThresholdBetween(atof(argv[6]), atof(argv[7]));
     filter->SetAllScalars(atoi(argv[8]));
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
+
+    // std::cerr << "selected array: " <<filter->GetInputArrayToProcess(0, filter->GetInput())->GetName() << std::endl;
 
     VTK_CREATE(vtkGeometryFilter, vtu2vtp);
     vtu2vtp->SetInputConnection(filter->GetOutputPort());
