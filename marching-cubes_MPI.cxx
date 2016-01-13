@@ -12,6 +12,7 @@
 #include <vtkImageData.h>//for GetExtent()
 #include <vtkImageConstantPad.h>
 #include <vtkContourFilter.h>//handles sub-extents of pvtp correctly, seems independent of vtkMarchingCubes (which does not handle sub-extents of pvtp correctly)
+#include <vtkWindowedSincPolyDataFilter.h>
 #include <vtkXMLPPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -43,13 +44,14 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 6){
+    if (argc != 7){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
                   << " iso-value"
                   << " cap-surface"
+                  << " smooth"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -114,8 +116,28 @@ int main (int argc, char *argv[]){
 	 << "# points: " << numPoints
          << "# cells: " << numCells << endl;
 
+
     vtkSmartPointer<vtkXMLPPolyDataWriter> writer= vtkSmartPointer<vtkXMLPPolyDataWriter>::New();
-    writer->SetInputConnection(filter->GetOutputPort());
+
+    int smoothingIterations= atoi(argv[6]);
+    if(smoothingIterations){
+        std::cerr << "Smoothing creates seams between pieces or cannot smooth over discontinuities!!!" << std::endl;
+	vtkSmartPointer<vtkWindowedSincPolyDataFilter> smoother= vtkSmartPointer<vtkWindowedSincPolyDataFilter>::New();
+	smoother->SetInputConnection(filter->GetOutputPort());
+	smoother->SetNumberOfIterations(smoothingIterations);
+	smoother->NonManifoldSmoothingOn();
+	smoother->NormalizeCoordinatesOn();
+	smoother->BoundarySmoothingOff() // try to avoids seams but does not smooth over discontinuities!
+	smoother->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+	smoother->UpdateInformation();
+	smoother->SetUpdateExtent(0, myId, numProcs, 0);
+	smoother->Update();
+	writer->SetInputConnection(smoother->GetOutputPort());
+	}
+    else{
+	writer->SetInputConnection(filter->GetOutputPort());
+	}
+
     writer->SetFileName(argv[2]);
     writer->SetNumberOfPieces(numProcs);
     writer->SetStartPiece(myId);
