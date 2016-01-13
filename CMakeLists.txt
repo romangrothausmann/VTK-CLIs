@@ -183,3 +183,9 @@ ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe} "${vtkSplineDrivenImageSlicer}/vtkFr
 TARGET_INCLUDE_DIRECTORIES(${CurrentExe} PRIVATE "${vtkSplineDrivenImageSlicer}")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "vtp2stl")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "-lglut -lGL")
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)

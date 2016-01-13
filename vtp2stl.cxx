@@ -1,12 +1,12 @@
-////program for
+////program for vtkSTLWriter
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkMetaImageReader.h>
-#include <vtkXMLPolyDataWriter.h>
+#include <vtkXMLPolyDataReader.h>
+#include <vtkSTLWriter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -44,18 +44,18 @@ int main (int argc, char *argv[]){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
-                  << " compress"
+                  << " binary|ASCII"
                   << std::endl;
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
-        std::cerr << "The input should end with .mha or .mhd" << std::endl;
-        return -1;
-        }
-
-    if(!(strcasestr(argv[2],".vtp"))) {
+    if(!(strcasestr(argv[1],".vtp"))) {
         std::cerr << "The output should end with .vtp" << std::endl;
+        return -1;
+	}
+
+    if(!(strcasestr(argv[2],".stl"))) {
+        std::cerr << "The output should end with .stl" << std::endl;
         return -1;
         }
 
@@ -64,24 +64,18 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkMetaImageReader, reader);
+    VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
-    filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    filter->Update();
-
-    VTK_CREATE(vtkXMLPolyDataWriter, writer);
-    writer->SetInputConnection(filter->GetOutputPort());
+    VTK_CREATE(vtkSTLWriter, writer);
+    writer->SetInputConnection(reader->GetOutputPort());
     writer->SetFileName(argv[2]);
-    writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
     if(atoi(argv[3]))
-        writer->SetCompressorTypeToZLib();//default
+        writer->SetFileTypeToBinary();
     else
-        writer->SetCompressorTypeToNone();
+        writer->SetFileTypeToASCII();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     writer->Write();
 
