@@ -127,7 +127,7 @@ int main (int argc, char *argv[]){
 	smoother->SetNumberOfIterations(smoothingIterations);
 	smoother->NonManifoldSmoothingOn();
 	smoother->NormalizeCoordinatesOn();
-	smoother->BoundarySmoothingOff() // try to avoids seams but does not smooth over discontinuities!
+	smoother->BoundarySmoothingOff(); // try to avoids seams but does not smooth over discontinuities!
 	smoother->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 	smoother->UpdateInformation();
 	smoother->SetUpdateExtent(0, myId, numProcs, 0);
