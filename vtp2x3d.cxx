@@ -5,7 +5,7 @@
 
 
 #include <vtkSmartPointer.h>
-#include <vtkXMLPolyDataReader.h>
+#include <vtkMetaImageReader.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -49,8 +49,8 @@ int main (int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".vtp"))) {
-        std::cerr << "The input should end with .vtp" << std::endl;
+    if(!(strcasestr(argv[1],".mha") || strcasestr(argv[1],".mhd"))) {
+        std::cerr << "The input should end with .mha or .mhd" << std::endl;
         return -1;
         }
 
@@ -64,7 +64,7 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkXMLPolyDataReader, reader);
+    VTK_CREATE(vtkMetaImageReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
