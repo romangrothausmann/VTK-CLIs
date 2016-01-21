@@ -6,7 +6,11 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
-#include <vtkXMLPolyDataWriter.h>
+#include <vtkPolyDataMapper.h>//as input is definitly vtkPolyData othersiwe use vtkDataSetMapper
+#include <vtkActor.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkX3DExporter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -40,11 +44,10 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 3){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
-                  << " compress"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -54,8 +57,8 @@ int main (int argc, char *argv[]){
         return -1;
         }
 
-    if(!(strcasestr(argv[2],".vtp"))) {
-        std::cerr << "The output should end with .vtp" << std::endl;
+    if(!(strcasestr(argv[2],".x3d"))) {
+        std::cerr << "The output should end with .x3d" << std::endl;
         return -1;
         }
 
@@ -69,21 +72,28 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
-    filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    filter->Update();
+    VTK_CREATE(vtkPolyDataMapper, mapper);
+    mapper->SetInputConnection(reader->GetOutputPort());
 
-    VTK_CREATE(vtkXMLPolyDataWriter, writer);
-    writer->SetInputConnection(filter->GetOutputPort());
+    VTK_CREATE(vtkActor, actor);
+    actor->SetMapper(mapper);
+
+    VTK_CREATE(vtkRenderer, renderer);
+    renderer->AddActor(actor);
+    renderer->SetBackground(1, 1, 1);//white
+
+    VTK_CREATE(vtkRenderWindow, renderWindow);
+    //renderWindow->OffScreenRenderingOn();
+    renderWindow->AddRenderer(renderer);
+
+    VTK_CREATE(vtkX3DExporter, writer);
+    writer->SetInput(renderWindow);
     writer->SetFileName(argv[2]);
-    writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
-    if(atoi(argv[3]))
-        writer->SetCompressorTypeToZLib();//default
-    else
-        writer->SetCompressorTypeToNone();
+    //writer->SetSpeed(5.5)//default 4
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    std::cerr << "X3D export... ";
     writer->Write();
+    std::cerr << "done." << std::endl;
 
     return EXIT_SUCCESS;
     }
