@@ -1,12 +1,22 @@
 ////program to create a marching-cubes surface with vtkContourFilter
 //01: based on marching-cubes.cxx
 
+// find VTK-git/ -name "*cxx" -exec grep -iHn 'Set(.*CAN_PRODUCE_SUB_EXTENT' {} \;
+// lists: 
+// VTK-git/IO/Image/vtkImageReader.cxx
+// VTK-git/IO/Image/vtkImageReader2.cxx
+// VTK-git/IO/XML/vtkXMLStructuredDataReader.cxx
+// VTK-git/IO/XML/vtkXMLPStructuredDataReader.cxx
 
+// vtkXMLImageDataReader is based on vtkXMLStructuredDataReader and can stream
+// vtkMetaImageReader is based on vtkImageReader2 and can NOT stream
+// vtkImageReader2Factory cannot load VTIs but MHAs/MHDs but these then cannot stream
 
 
 #include <vtkSmartPointer.h>
 #include <vtkMPIController.h>
-#include <vtkXMLImageDataReader.h>//seems to be the only reader that works, has outInfo->Set(CAN_PRODUCE_SUB_EXTENT(), 1)  neither vtkMetaImageReader nor vtkPNrrdReader worked, vtkMPIImageReader (RAW) not tested
+#include <vtkImageReader2Factory.h>
+#include <vtkImageReader2.h>
 #include <vtkInformation.h>//for GetOutputInformation
 #include <vtkStreamingDemandDrivenPipeline.h>//for extent
 #include <vtkImageData.h>//for GetExtent()
@@ -56,11 +66,6 @@ int main (int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".vti"))) {
-        std::cerr << "The input should end with .vti" << std::endl;
-        return -1;
-        }
-
     if(!(strcasestr(argv[2],".pvtp"))) {
         std::cerr << "The output should end with .pvtp" << std::endl;
         return -1;
@@ -75,7 +80,12 @@ int main (int argc, char *argv[]){
     int myId = controller->GetLocalProcessId();
     int numProcs = controller->GetNumberOfProcesses();
 
-    vtkSmartPointer<vtkXMLImageDataReader> reader= vtkSmartPointer<vtkXMLImageDataReader>::New();
+    vtkSmartPointer<vtkImageReader2Factory> readerFactory= vtkSmartPointer<vtkImageReader2Factory>::New();    
+    vtkImageReader2* reader= readerFactory->CreateImageReader2(argv[1]);
+    if(!reader){
+        std::cerr << "Could not find an appropriate reader. Does file exist?" << std::endl;
+        return -1;
+        }	
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->UpdateInformation();//needed to get extent
