@@ -6,6 +6,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkTriangleFilter.h>
 #include <vtkSTLWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -69,8 +70,12 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
+    VTK_CREATE(vtkTriangleFilter, filter);
+    filter->SetInputConnection(reader->GetOutputPort());
+    filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
     VTK_CREATE(vtkSTLWriter, writer);
-    writer->SetInputConnection(reader->GetOutputPort());
+    writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[2]);
     if(atoi(argv[3]))
         writer->SetFileTypeToBinary();
