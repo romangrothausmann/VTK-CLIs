@@ -68,7 +68,7 @@ int main (int argc, char *argv[]){
     vtkStreamingDemandDrivenPipeline* exec= vtkStreamingDemandDrivenPipeline::SafeDownCast(reader->GetExecutive());
     // exec->SetUpdateNumberOfPieces(exec->GetOutputInformation(0), numProcs);
 
-    double totalPolyData= 0;
+    unsigned long  totalPolyData= 0;
     for(int myId= 0; myId < numProcs; myId++){
         // reader->SetUpdateExtent(0, myId, numProcs, 0);
         // reader->Update();
@@ -80,10 +80,10 @@ int main (int argc, char *argv[]){
         reader->Update();
         //exec->Update();
 
-        double subtotalPolyData= reader->GetOutput()->GetNumberOfCells();
+        unsigned long  subtotalPolyData= reader->GetOutput()->GetNumberOfCells();
         totalPolyData+= subtotalPolyData;
 
-        fprintf(stderr, "%5.1f%% (%d/%d): sub-total cells: %f; accumulated total cells: %f\n", myId*100.0/numProcs, myId, numProcs, subtotalPolyData, totalPolyData);
+        fprintf(stderr, "%5.1f%% (%d/%d): sub-total cells: %ld; accumulated total cells: %ld\n", myId*100.0/numProcs, myId, numProcs, subtotalPolyData, totalPolyData);
         }
 
     std::cout << "Total mesh cells: " << totalPolyData << std::endl;
