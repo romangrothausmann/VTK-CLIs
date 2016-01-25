@@ -6,6 +6,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkPieceScalars.h>
 #include <vtkExtractPolyDataPiece.h>//opposite of vtkPolyDataStreamer, use vtkDistributedDataFilter (D3) for more equally sized pieces
 #include <vtkXMLPolyDataWriter.h>
 
@@ -76,10 +77,15 @@ int main (int argc, char *argv[]){
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     // filter->Update(); //this is called by writer
 
+    VTK_CREATE(vtkPieceScalars, ps);
+    ps->SetInputConnection(filter->GetOutputPort());
+    ps->SetScalarModeToCellData();
+    ps->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
     int numPieces= atoi(argv[4]);
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
-    writer->SetInputConnection(filter->GetOutputPort());
+    writer->SetInputConnection(ps->GetOutputPort());
     writer->SetFileName(argv[2]);
     writer->SetNumberOfPieces(numPieces);
     //writer->SetGhostLevel(atoi(argv[5]));
