@@ -6,7 +6,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
-#include <vtkStreamingDemandDrivenPipeline.h>
+#include <vtkInformation.h>
 #include <vtkPolyData.h>
 
 #include <vtkCallbackCommand.h>
@@ -65,20 +65,19 @@ int main (int argc, char *argv[]){
     reader->UpdateInformation();
 
     int numProcs= atoi(argv[2]);
-    vtkStreamingDemandDrivenPipeline* exec= vtkStreamingDemandDrivenPipeline::SafeDownCast(reader->GetExecutive());
-    // exec->SetUpdateNumberOfPieces(exec->GetOutputInformation(0), numProcs);
+
+    vtkInformation* outInfo = reader->GetOutputInformation(0);
+    // Check if reader can handle piece requests (for unstructured) or sub-extents (for structured)
+    if (!outInfo->Get(vtkAlgorithm::CAN_HANDLE_PIECE_REQUEST()) &&
+	!outInfo->Get(vtkAlgorithm::CAN_PRODUCE_SUB_EXTENT())){
+	std::cout << "Reader cannot stream data!" << std::endl;
+	numProcs= 1;
+	}
 
     unsigned long  totalPolyData= 0;
     for(int myId= 0; myId < numProcs; myId++){
-        // reader->SetUpdateExtent(0, myId, numProcs, 0);
-        // reader->Update();
-
-        // exec->SetUpdatePiece(exec->GetOutputInformation(0), myId);
-        // exec->Update();
-
-        exec->SetUpdateExtent(0, myId, numProcs, 0);
+        reader->SetUpdateExtent(0, myId, numProcs, 0);
         reader->Update();
-        //exec->Update();
 
         unsigned long  subtotalPolyData= reader->GetOutput()->GetNumberOfCells();
         totalPolyData+= subtotalPolyData;
