@@ -6,8 +6,8 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
-#include <vtkPieceScalars.h>
 #include <vtkExtractPolyDataPiece.h>//opposite of vtkPolyDataStreamer, use vtkDistributedDataFilter (D3) for more equally sized pieces
+#include <vtkPieceScalars.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -79,7 +79,7 @@ int main (int argc, char *argv[]){
 
     VTK_CREATE(vtkPieceScalars, ps);
     ps->SetInputConnection(filter->GetOutputPort());
-    ps->SetScalarModeToCellData();
+    ps->SetScalarModeToPointData();// pointData can be rendered much faster in paraview
     ps->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     int numPieces= atoi(argv[4]);

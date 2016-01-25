@@ -1,13 +1,15 @@
-////program to write a VTP-file as a multi-piece VTP-file (that can be streamed)
-//01: based on vtp2pvtp.cxx
+////program to write a VTP-file as a multi-piece VTP-file (that can be streamed) using vtkDistributedDataFilter
+//01: based on vtp2multi-piece_vtp.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
-#include <vtkPieceScalars.h>
+#include <vtkDistributedDataFilter.h>
+#include <vtkDataSetSurfaceFilter.h>//faster version of vtkGeometryFilter
 #include <vtkExtractPolyDataPiece.h>//opposite of vtkPolyDataStreamer, use vtkDistributedDataFilter (D3) for more equally sized pieces
+#include <vtkPieceScalars.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -72,14 +74,25 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->UpdateInformation();
 
+    VTK_CREATE(vtkDistributedDataFilter, d3);
+    d3->SetInputConnection(0, reader->GetOutputPort());
+    d3->SetBoundaryModeToSplitBoundaryCells();
+    d3->UseMinimalMemoryOff(); // faster than UseMinimalMemoryOn()
+    d3->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    //d3->Update();
+
+    VTK_CREATE(vtkDataSetSurfaceFilter, usg2pd);
+    usg2pd->SetInputConnection(d3->GetOutputPort());
+    usg2pd->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
     VTK_CREATE(vtkExtractPolyDataPiece, filter);
-    filter->SetInputConnection(reader->GetOutputPort());
+    filter->SetInputConnection(usg2pd->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     // filter->Update(); //this is called by writer
 
     VTK_CREATE(vtkPieceScalars, ps);
     ps->SetInputConnection(filter->GetOutputPort());
-    ps->SetScalarModeToCellData();
+    ps->SetScalarModeToPointData();// pointData can be rendered much faster in paraview
     ps->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     int numPieces= atoi(argv[4]);
