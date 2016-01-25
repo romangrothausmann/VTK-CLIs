@@ -1,5 +1,5 @@
-////program to write a VTP-file to a PVTP-file
-//01: based on template.cxx
+////program to write a VTP-file as a multi-piece VTP-file (that can be streamed)
+//01: based on vtp2pvtp.cxx
 
 
 
@@ -7,7 +7,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkExtractPolyDataPiece.h>//opposite of vtkPolyDataStreamer, use vtkDistributedDataFilter (D3) for more equally sized pieces
-#include <vtkXMLPPolyDataWriter.h>
+#include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -56,8 +56,8 @@ int main (int argc, char *argv[]){
         return -1;
         }
 
-    if(!(strcasestr(argv[2],".pvtp"))) {
-        std::cerr << "The output should end with .pvtp" << std::endl;
+    if(!(strcasestr(argv[2],".vtp"))) {
+        std::cerr << "The output should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -78,7 +78,7 @@ int main (int argc, char *argv[]){
 
     int numPieces= atoi(argv[4]);
 
-    VTK_CREATE(vtkXMLPPolyDataWriter, writer);
+    VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[2]);
     writer->SetNumberOfPieces(numPieces);
@@ -89,14 +89,7 @@ int main (int argc, char *argv[]){
     else
         writer->SetCompressorTypeToNone();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-
-    for(int i= 0; i < numPieces; i++){
-	//filter->UpdateInformation();
-	//filter->SetUpdateExtent(0, i, numPieces, 0);
-	writer->SetStartPiece(i);
-	writer->SetEndPiece(i);
-	writer->Write();
-	}
+    writer->Write();
 
     return EXIT_SUCCESS;
     }
