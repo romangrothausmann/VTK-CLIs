@@ -52,7 +52,7 @@ int main (int argc, char *argv[]){
         }
 
     if(!(strcasestr(argv[1],".vtp"))) {
-        std::cerr << "The output should end with .vtp" << std::endl;
+        std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
 

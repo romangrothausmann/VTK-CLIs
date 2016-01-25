@@ -1,11 +1,12 @@
-////program to write a VTP-file as a multi-piece VTP-file (that can be streamed)
-//01: based on vtp2pvtp.cxx
+////program to write a VTP-file as a multi-piece VTP-file (that can be streamed) using vtkOBBDicer
+//01: based on vtp2multi-piece_vtp.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkOBBDicer.h>
 #include <vtkExtractPolyDataPiece.h>//opposite of vtkPolyDataStreamer, use vtkDistributedDataFilter (D3) for more equally sized pieces
 #include <vtkXMLPolyDataWriter.h>
 
@@ -52,7 +53,7 @@ int main (int argc, char *argv[]){
         }
 
     if(!(strcasestr(argv[1],".vtp"))) {
-        std::cerr << "The output should end with .vtp" << std::endl;
+        std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -71,12 +72,20 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->UpdateInformation();
 
+    VTK_CREATE(vtkOBBDicer, obbd);
+    obbd->SetInputConnection(0, reader->GetOutputPort());
+    obbd->SetDiceModeToSpecifiedNumberOfPieces();
+    obbd->SetNumberOfPieces(atoi(argv[4]));
+    obbd->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    obbd->Update();
+
+    int numPieces= obbd->GetNumberOfActualPieces();
+    std::cerr << "GetNumberOfActualPieces: " << numPieces << std::endl;
+
     VTK_CREATE(vtkExtractPolyDataPiece, filter);
-    filter->SetInputConnection(reader->GetOutputPort());
+    filter->SetInputConnection(obbd->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     // filter->Update(); //this is called by writer
-
-    int numPieces= atoi(argv[4]);
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
