@@ -87,7 +87,7 @@ int main (int argc, char *argv[]){
         unsigned long  subtotalPolyData= reader->GetOutput()->GetNumberOfCells();
         totalPolyData+= subtotalPolyData;
 
-        fprintf(stderr, "%5.1f%% (%d/%d): sub-total cells: %ld; accumulated total cells: %ld\n", myId*100.0/numProcs, myId, numProcs, subtotalPolyData, totalPolyData);
+        fprintf(stderr, "%5.1f%% (%d/%d): sub-total cells: %ld; accumulated total cells: %ld\n", (myId+1)*100.0/numProcs, myId+1, numProcs, subtotalPolyData, totalPolyData);
         }
 
     std::cout << "Total mesh cells: " << totalPolyData << std::endl;
