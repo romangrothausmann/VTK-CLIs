@@ -7,7 +7,10 @@
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkOBBDicer.h>
-#include <vtkExtractPolyDataPiece.h>//opposite of vtkPolyDataStreamer, use vtkDistributedDataFilter (D3) for more equally sized pieces
+#include <vtkThreshold.h>
+#include <vtkDataObject.h>
+#include <vtkDataSetAttributes.h>
+#include <vtkDataSetSurfaceFilter.h> //faster version of vtkGeometryFilter
 #include <vtkPieceScalars.h>
 #include <vtkXMLPolyDataWriter.h>
 
@@ -71,7 +74,6 @@ int main (int argc, char *argv[]){
     VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader->UpdateInformation();
 
     VTK_CREATE(vtkOBBDicer, obbd);
     obbd->SetInputConnection(0, reader->GetOutputPort());
@@ -83,13 +85,20 @@ int main (int argc, char *argv[]){
     int numPieces= obbd->GetNumberOfActualPieces();
     std::cerr << "GetNumberOfActualPieces: " << numPieces << std::endl;
 
-    VTK_CREATE(vtkExtractPolyDataPiece, filter);
-    filter->SetInputConnection(obbd->GetOutputPort());
+    VTK_CREATE(vtkThreshold, filter);
+    //filter->SetInputConnection(obbd->GetOutputPort()); //causes pipeline update to propagate up to obbd
+    filter->SetInputData(obbd->GetOutput()); //avoids pipeline update to propagate up to obbd
+    filter->SetInputArrayToProcess(0, 0, 0, vtkDataObject::FIELD_ASSOCIATION_POINTS, vtkDataSetAttributes::SCALARS);
+    filter->AllScalarsOff();
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     // filter->Update(); //this is called by writer
 
+    VTK_CREATE(vtkDataSetSurfaceFilter, vtu2vtp);
+    vtu2vtp->SetInputConnection(filter->GetOutputPort());
+    vtu2vtp->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
     VTK_CREATE(vtkPieceScalars, ps);
-    ps->SetInputConnection(filter->GetOutputPort());
+    ps->SetInputConnection(vtu2vtp->GetOutputPort());
     ps->SetScalarModeToPointData();// pointData can be rendered much faster in paraview
     ps->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
@@ -98,13 +107,21 @@ int main (int argc, char *argv[]){
     writer->SetFileName(argv[2]);
     writer->SetNumberOfPieces(numPieces);
     //writer->SetGhostLevel(atoi(argv[5]));
-    writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
+    writer->SetDataModeToAppended();
+    writer->SetEncodeAppendedData(0);
     if(atoi(argv[3]))
         writer->SetCompressorTypeToZLib();//default
     else
         writer->SetCompressorTypeToNone();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    writer->Write();
+
+    for(int i= 0; i < numPieces; i++){
+	filter->ThresholdBetween(i,i);
+	writer->SetWritePiece(i);
+	writer->SetDataModeToAppended();
+	writer->Write(); //overwrites former piece, even with SetDataModeToAppended
+        std::cerr << "Wrote piece: " << +i+1 << std::endl;
+	}
 
     return EXIT_SUCCESS;
     }
