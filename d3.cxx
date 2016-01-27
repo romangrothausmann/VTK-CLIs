@@ -1,4 +1,4 @@
-////program to write a VTP-file as a multi-piece VTP-file (that can be streamed) using vtkDistributedDataFilter
+////program to write a VTP-file as a multi-piece VTP-file (that can be streamed) using vtkKdTree (as in vtkDistributedDataFilter but no MPI dependence)
 //01: based on vtp2multi-piece_vtp.cxx
 
 
@@ -6,9 +6,10 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
-#include <vtkDistributedDataFilter.h>
+#include <vtkKdTree.h>
+#include <vtkExtractCells.h>
+#include <vtkIdList.h>
 #include <vtkDataSetSurfaceFilter.h>//faster version of vtkGeometryFilter
-#include <vtkExtractPolyDataPiece.h>//opposite of vtkPolyDataStreamer, use vtkDistributedDataFilter (D3) for more equally sized pieces
 #include <vtkPieceScalars.h>
 #include <vtkXMLPolyDataWriter.h>
 
@@ -72,30 +73,34 @@ int main (int argc, char *argv[]){
     VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader->UpdateInformation();
+    reader->Update();
 
-    VTK_CREATE(vtkDistributedDataFilter, d3);
-    d3->SetInputConnection(0, reader->GetOutputPort());
-    d3->SetBoundaryModeToSplitBoundaryCells();
-    d3->UseMinimalMemoryOff(); // faster than UseMinimalMemoryOn()
-    d3->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    //d3->Update();
+    VTK_CREATE(vtkKdTree, d3);
+    d3->SetNumberOfRegionsOrMore(atoi(argv[4]));
+    //d3->SetMinCells(); //min number of cells per region
+    //d3->BuildLocatorFromPoints(reader->GetOutput()->GetPoints());
+    d3->SetDataSet(reader->GetOutput());
+    //d3->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK); //odd progress reports
+    d3->BuildLocator();
+    d3->CreateCellLists(); //needs BuildLocator() before!
 
-    VTK_CREATE(vtkDataSetSurfaceFilter, usg2pd);
-    usg2pd->SetInputConnection(d3->GetOutputPort());
-    usg2pd->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    int numPieces= d3->GetNumberOfRegions();
+    std::cerr << "GetNumberOfRegions: " << numPieces << std::endl;
 
-    VTK_CREATE(vtkExtractPolyDataPiece, filter);
-    filter->SetInputConnection(usg2pd->GetOutputPort());
+    VTK_CREATE(vtkExtractCells, filter);
+    //filter->SetInputConnection(reader->GetOutputPort()); //causes pipeline update to propagate up to obbd
+    filter->SetInputData(reader->GetOutput()); //avoids pipeline update to propaga
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     // filter->Update(); //this is called by writer
 
+    VTK_CREATE(vtkDataSetSurfaceFilter, usg2pd);
+    usg2pd->SetInputConnection(filter->GetOutputPort());
+    usg2pd->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
     VTK_CREATE(vtkPieceScalars, ps);
-    ps->SetInputConnection(filter->GetOutputPort());
+    ps->SetInputConnection(usg2pd->GetOutputPort());
     ps->SetScalarModeToPointData();// pointData can be rendered much faster in paraview
     ps->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-
-    int numPieces= atoi(argv[4]);
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(ps->GetOutputPort());
@@ -108,7 +113,21 @@ int main (int argc, char *argv[]){
     else
         writer->SetCompressorTypeToNone();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    writer->Write();
+
+    for(int i= 0; i < numPieces; i++){
+	
+	VTK_CREATE(vtkIdList, cellsIds);
+	cellsIds= d3->GetCellList(i); //needs CreateCellLists() before!
+
+	if(cellsIds){
+	    filter->SetCellList(cellsIds);
+	    writer->SetWritePiece(i);
+	    writer->SetDataModeToAppended();
+	    writer->Write();
+	    d3->PrintRegion(i);
+	    std::cerr << "Wrote piece: " << +i+1 << "; cells: " << cellsIds->GetNumberOfIds() << std::endl;
+	    }
+	}
 
     return EXIT_SUCCESS;
     }
