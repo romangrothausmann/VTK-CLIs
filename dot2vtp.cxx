@@ -41,11 +41,12 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 // http://stackoverflow.com/questions/29898195/boostread-graphviz-how-to-read-out-properties
 // http://stackoverflow.com/questions/29496182/read-graphviz-in-boostgraph-pass-to-constructor/29501850#29501850
+// http://stackoverflow.com/questions/20847295/how-to-read-in-pos-attribute-of-dot-file-using-boost
 struct DotVertex { 
-	std::string name;
-	std::string label;
-	std::string pos;
-	};
+    std::string name;
+    std::string label;
+    std::string pos;
+    };
 
 struct DotEdge {
     std::string label;
