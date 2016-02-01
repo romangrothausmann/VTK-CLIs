@@ -54,6 +54,9 @@ IF ( VTK_FOUND )
       INCLUDE( ${USE_VTK_FILE} )
 ENDIF( VTK_FOUND )
 
+#Boost
+FIND_PACKAGE(Boost)
+
 INCLUDE_DIRECTORIES(
   # $ENV{HOME}/vtk/
   )
@@ -225,3 +228,11 @@ ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+IF(Boost_FOUND)
+SET(CurrentExe "dot2vtp")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} ${Boost_LIBRARIES} "-lboost_graph" ) # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=646207
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+ENDIF()
