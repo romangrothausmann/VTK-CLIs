@@ -4,6 +4,7 @@
 
 
 #include <boost/graph/graphviz.hpp>
+#include <iostream>
 
 #include <vtkSmartPointer.h>
 #include <vtkMutableUndirectedGraph.h>
@@ -45,12 +46,35 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 struct DotVertex { 
     std::string name;
     std::string label;
-    std::string pos;
+    std::vector<double> pos;
     };
 
 struct DotEdge {
     std::string label;
     };
+
+// http://lists.boost.org/boost-users/2010/06/59920.php
+inline std::istream& operator>> (std::istream& ss, std::vector<double>& vect){ 
+    double i;
+    while(ss >> i){
+	vect.push_back(i);
+	if(ss.peek() == ',')
+	    ss.ignore();
+	}
+
+    return ss; 
+    }
+
+inline std::ostream& operator<< (std::ostream& out, const std::vector<double>& vect) {
+    size_t last = vect.size() - 1;
+    for (size_t i = 0; i < vect.size(); ++i) {
+        out << vect[i];
+        if (i != last)
+            out << ",";
+	}
+
+    return out;
+    }
 
 
 int main (int argc, char *argv[]){
@@ -101,18 +125,7 @@ int main (int argc, char *argv[]){
     for(vp = vertices(dotGraph); vp.first != vp.second; ++vp.first){
         //std::cout << dotGraph[*vp.first].pos << std::endl;
         ograph->AddVertex();
-
-	std::vector<int> vect;
-	std::stringstream ss(dotGraph[*vp.first].pos);
-
-	double i;
-	while(ss >> i){
-	    vect.push_back(i);
-
-	    if(ss.peek() == ',')
-		ss.ignore();
-	    }
-    	points->InsertNextPoint(vect[0], vect[1], 0);
+    	points->InsertNextPoint(dotGraph[*vp.first].pos[0], dotGraph[*vp.first].pos[1], 0);
         }
 
     std::pair<DotGraphT::edge_iterator, DotGraphT::edge_iterator> edgeIteratorRange = boost::edges(dotGraph);
