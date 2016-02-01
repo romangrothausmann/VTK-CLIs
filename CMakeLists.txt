@@ -55,7 +55,7 @@ IF ( VTK_FOUND )
 ENDIF( VTK_FOUND )
 
 #Boost
-FIND_PACKAGE(Boost)
+FIND_PACKAGE(Boost COMPONENTS graph)
 
 INCLUDE_DIRECTORIES(
   # $ENV{HOME}/vtk/
@@ -233,6 +233,6 @@ IF(Boost_FOUND)
 SET(CurrentExe "dot2vtp")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} ${Boost_LIBRARIES} "-lboost_graph" ) # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=646207
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} ${Boost_LIBRARIES}) # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=646207  http://stackoverflow.com/questions/6646405/how-do-you-add-boost-libraries-in-cmakelists-txt
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 ENDIF()
