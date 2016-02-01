@@ -236,3 +236,11 @@ ADD_EXECUTABLE(${CurrentExe}
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} ${Boost_LIBRARIES}) # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=646207  http://stackoverflow.com/questions/6646405/how-do-you-add-boost-libraries-in-cmakelists-txt
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 ENDIF()
+
+IF(BUILD_vtkPolyDataToGraph)
+SET(CurrentExe "vtp2dot")
+ADD_EXECUTABLE(${CurrentExe}
+  ${CurrentExe} ${VTKGraphConversionsDir}/vtkPolyDataToGraph.cxx)
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+ENDIF()

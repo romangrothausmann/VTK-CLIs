@@ -45,7 +45,7 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 struct DotVertex { 
     std::string name;
     std::string label;
-    std::string pos;
+    std::string pos; // -Tdot does save layout geometry: http://www.graphviz.org/content/output-formats#ddot
     };
 
 struct DotEdge {
