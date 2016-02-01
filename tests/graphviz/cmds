@@ -1,0 +1,9 @@
+
+
+~/vtk/simple/build_vtk6_iana0/vtp2dot skel.vtp skel.dot
+
+neato -Tdot skel.dot > skel.neato.dot
+neato -Tsvg skel.dot > skel.neato.svg
+
+~/vtk/simple/build_vtk6_iana0/dot2vtp skel.neato.dot skel.neato.vtp 0
+
