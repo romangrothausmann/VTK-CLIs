@@ -1,15 +1,12 @@
-////program to convert a graph stored in a VTP in a DOT-file (graphviz)
-//01: based on template.cxx and ideas from https://github.com/daviddoria/GraphOpening
+////program for
+//01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
-#include "vtkPolyDataToGraph.h"
-#include <vtkBoostGraphAdapter.h>
-
-#include <boost/graph/graphviz.hpp>
+#include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -43,10 +40,11 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 3){
+    if (argc != 4){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
+                  << " compress"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -56,8 +54,8 @@ int main (int argc, char *argv[]){
         return -1;
         }
 
-    if(!(strcasestr(argv[2],".dot") || strcasestr(argv[2],".gv"))) {
-        std::cerr << "The output should end with .dot or .gv" << std::endl;
+    if(!(strcasestr(argv[2],".vtp"))) {
+        std::cerr << "The output should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -71,15 +69,21 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(vtkPolyDataToGraph, filter);
+    VTK_CREATE(, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
-    vtkUndirectedGraph* graph = vtkUndirectedGraph::SafeDownCast(filter->GetOutput());
-
-    std::ofstream fout(argv[2]);
-    boost::write_graphviz(fout, graph); 
+    VTK_CREATE(vtkXMLPolyDataWriter, writer);
+    writer->SetInputConnection(filter->GetOutputPort());
+    writer->SetFileName(argv[2]);
+    writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
+    if(atoi(argv[3]))
+        writer->SetCompressorTypeToZLib();//default
+    else
+        writer->SetCompressorTypeToNone();
+    writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    writer->Write();
 
     return EXIT_SUCCESS;
     }

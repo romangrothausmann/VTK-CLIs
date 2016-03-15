@@ -1,5 +1,5 @@
 ////program to convert a graph stored in a DOT-file (graphviz) in a VTP
-//01: based on template.cxx
+//01: based on template.cxx and ideas from https://github.com/daviddoria/GraphOpening
 
 
 
