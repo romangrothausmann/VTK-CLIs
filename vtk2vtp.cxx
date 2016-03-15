@@ -1,11 +1,11 @@
-////program for
+////program to convert legacy VTKs to VTPs
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkXMLPolyDataReader.h>
+#include <vtkDataSetReader.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -49,8 +49,8 @@ int main (int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".vtp"))) {
-        std::cerr << "The input should end with .vtp" << std::endl;
+    if(!(strcasestr(argv[1],".vtk"))) {
+        std::cerr << "The input should end with .vtk" << std::endl;
         return -1;
         }
 
@@ -64,18 +64,13 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkXMLPolyDataReader, reader);
+    VTK_CREATE(vtkDataSetReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
-    filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    filter->Update();
-
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
-    writer->SetInputConnection(filter->GetOutputPort());
+    writer->SetInputConnection(reader->GetOutputPort());
     writer->SetFileName(argv[2]);
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
     if(atoi(argv[3]))
