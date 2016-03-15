@@ -1,4 +1,4 @@
-////program for
+////program for vtkQuadricClustering
 //01: based on template.cxx
 
 
@@ -6,6 +6,8 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkTriangleFilter.h>
+#include <vtkQuadricClustering.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,11 +42,12 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 5){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
+                  << " devisions"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -69,8 +72,14 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
+    VTK_CREATE(vtkTriangleFilter, triangulate);
+    triangulate->SetInputConnection(reader->GetOutputPort());
+
+    VTK_CREATE(vtkQuadricClustering, filter);
+    filter->SetInputConnection(0, triangulate->GetOutputPort());
+    filter->SetNumberOfXDivisions(atoi(argv[4]));
+    filter->SetNumberOfYDivisions(atoi(argv[4]));
+    filter->SetNumberOfZDivisions(atoi(argv[4]));
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
