@@ -1,4 +1,4 @@
-////program for
+////program for vtkPolyDataConnectivityFilter
 //01: based on template.cxx
 
 
@@ -6,6 +6,9 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkPolyDataConnectivityFilter.h>
+#include <vtkIdTypeArray.h>
+#include <vtkPointData.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -69,11 +72,30 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
+    VTK_CREATE(vtkPolyDataConnectivityFilter, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
+    ////first all for info:
+    filter->SetExtractionModeToAllRegions();
+    filter->ColorRegionsOn();
+    filter->ScalarConnectivityOff();
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
+    vtkSmartPointer<vtkIdTypeArray> regionIdArray= vtkIdTypeArray::SafeDownCast(filter->GetOutput()->GetPointData()->GetArray("RegionId")); //vtkPolyDataConnectivityFilter only produces PointData!!!
+
+    if (regionIdArray){
+	vtkIdType num_labels= regionIdArray->GetRange()[1]; //[0]: min [1]: max
+	std::cerr << "# labels: " << num_labels+1 << "; size ragne: " << filter->GetRegionSizes()->GetRange()[0] << " -- " << filter->GetRegionSizes()->GetRange()[1] << std::endl;
+	}
+    else
+	std::cerr << "No regionIdArray!" << std::endl;
+
+
+    ////now just the largest:
+    filter->SetExtractionModeToLargestRegion();
+    filter->Update();
+
+    
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[2]);
