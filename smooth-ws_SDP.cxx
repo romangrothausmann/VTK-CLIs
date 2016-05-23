@@ -7,7 +7,10 @@
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkInformation.h>
+#include <vtkStreamingDemandDrivenPipeline.h>
 #include <vtkPolyData.h>
+#include <vtkWindowedSincPolyDataFilter.h>
+#include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -41,15 +44,22 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 3){
+    if (argc != 7){
         std::cerr << "Usage: " << argv[0]
                   << " input"
+                  << " output"
+                  << " NumberOfIterations NonManifoldSmoothing NormalizeCoordinates"
                   << " chunks"
                   << std::endl;
         return EXIT_FAILURE;
         }
 
     if(!(strcasestr(argv[1],".vtp"))) {
+        std::cerr << "The input should end with .vtp" << std::endl;
+        return -1;
+        }
+
+    if(!(strcasestr(argv[2],".vtp"))) {
         std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
@@ -64,7 +74,7 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->UpdateInformation();
 
-    int numProcs= atoi(argv[2]);
+    int numProcs= atoi(argv[6]);
 
     vtkInformation* outInfo = reader->GetOutputInformation(0);
     // Check if reader can handle piece requests (for unstructured) or sub-extents (for structured)
@@ -73,20 +83,26 @@ int main (int argc, char *argv[]){
 	std::cout << "Reader cannot stream data!" << std::endl;
 	numProcs= 1;
 	}
+    // std::cout << "Pieces " << outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES()) << std::endl;
 
-    unsigned long  totalPolyData= 0;
-    for(int myId= 0; myId < numProcs; myId++){
-        reader->SetUpdateExtent(0, myId, numProcs, 0);
-        reader->Update();
 
-        unsigned long  subtotalPolyData= reader->GetOutput()->GetNumberOfCells();
-        totalPolyData+= subtotalPolyData;
+    VTK_CREATE(vtkWindowedSincPolyDataFilter, filter);
+    filter->SetInputConnection(reader->GetOutputPort());
+    filter->SetNumberOfIterations(atoi(argv[3]));
+    filter->SetNonManifoldSmoothing(atoi(argv[4]));
+    filter->SetNormalizeCoordinates(atoi(argv[5]));
+    filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
-        fprintf(stderr, "%5.1f%% (%d/%d): sub-total cells: %ld; accumulated total cells: %ld\n", (myId+1)*100.0/numProcs, myId+1, numProcs, subtotalPolyData, totalPolyData);
-        }
+    VTK_CREATE(vtkXMLPolyDataWriter, writer);
+    writer->SetInputConnection(filter->GetOutputPort());
+    writer->SetFileName(argv[2]);
+    writer->SetNumberOfPieces(numProcs);
+    //writer->SetGhostLevel(atoi(argv[]));
+    writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
 
-    std::cout << "Total mesh cells: " << totalPolyData << std::endl;
-
+    writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    writer->Write();
+    
     return EXIT_SUCCESS;
     }
 
