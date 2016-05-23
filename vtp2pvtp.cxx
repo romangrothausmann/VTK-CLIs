@@ -81,6 +81,7 @@ int main (int argc, char *argv[]){
     VTK_CREATE(vtkXMLPPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[2]);
+    writer->SetHeaderTypeToUInt64();
     writer->SetNumberOfPieces(numPieces);
     //writer->SetGhostLevel(atoi(argv[5]));
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()

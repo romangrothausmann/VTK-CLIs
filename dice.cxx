@@ -13,6 +13,7 @@
 #include <vtkDataSetSurfaceFilter.h> //faster version of vtkGeometryFilter
 #include <vtkPieceScalars.h>
 #include <vtkXMLPolyDataWriter.h>
+#include <vtkUnstructuredGrid.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -119,7 +120,12 @@ int main (int argc, char *argv[]){
 	filter->ThresholdBetween(i,i);
 	writer->SetWritePiece(i);
 	writer->SetDataModeToAppended();
+	// std::stringstream sss;
+	// sss.str(""); sss << argv[2] << i << ".vtp";
+	// writer->SetFileName(sss.str().c_str());
 	writer->Write(); //overwrites former piece, even with SetDataModeToAppended
+	
+	std::cout << "# cells: " << filter->GetOutput()->GetNumberOfCells() << std::endl;
         std::cerr << "Wrote piece: " << +i+1 << std::endl;
 	}
 
