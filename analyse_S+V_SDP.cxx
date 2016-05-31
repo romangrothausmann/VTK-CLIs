@@ -5,6 +5,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkInformation.h>
 #include <vtkTriangleFilter.h>
 #include <vtkThreshold.h>
 #include <vtkGeometryFilter.h>
@@ -32,12 +33,12 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
         std::cerr << std::endl << std::flush;
         break;
 
-    //// VTK does not throw errors (http://public.kitware.com/pipermail/vtkusers/2009-February/050805.html) use Error-Events: http://www.cmake.org/Wiki/VTK/Examples/Cxx/Utilities/ObserveError
+	//// VTK does not throw errors (http://public.kitware.com/pipermail/vtkusers/2009-February/050805.html) use Error-Events: http://www.cmake.org/Wiki/VTK/Examples/Cxx/Utilities/ObserveError
     case vtkCommand::ErrorEvent:
         std::cerr << "Error: " << static_cast<char*>(callData) << std::endl << std::flush;
         break;
     case vtkCommand::WarningEvent:
-            std::cerr << "Warning: " << static_cast<char*>(callData) << std::endl << std::flush;
+	std::cerr << "Warning: " << static_cast<char*>(callData) << std::endl << std::flush;
         break;
         }
     }
@@ -45,10 +46,11 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 2){
+    if (argc != 3){
         std::cerr << "Usage: " << argv[0]
                   << " input"
-                  << std::endl;
+                  << " chunks"
+		  << std::endl;
         std::cerr << "Value calculation based on the discrete form of the divergence theorem." << std::endl;
         std::cerr << "Apart from the surface area, the calculations assume a closed mesh!" << std::endl;
         return EXIT_FAILURE;
@@ -67,7 +69,17 @@ int main (int argc, char *argv[]){
     VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader->Update();
+    reader->UpdateInformation();
+
+    int numPieces= atoi(argv[2]);
+
+    vtkInformation* outInfo = reader->GetOutputInformation(0);
+    // Check if reader can handle piece requests (for unstructured) or sub-extents (for structured)
+    if (!outInfo->Get(vtkAlgorithm::CAN_HANDLE_PIECE_REQUEST()) &&
+	!outInfo->Get(vtkAlgorithm::CAN_PRODUCE_SUB_EXTENT())){
+	std::cout << "Reader cannot stream data!" << std::endl;
+	numPieces= 1;
+	}
 
     VTK_CREATE(vtkTriangleFilter, triangle);
     triangle->SetInputConnection(reader->GetOutputPort());
@@ -89,6 +101,15 @@ int main (int argc, char *argv[]){
     filter->SetInputConnection(vtu2vtp->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
+    // filter->UpdateInformation();
+    // outInfo = filter->GetOutputInformation(0);
+    // if (!outInfo->Get(vtkAlgorithm::CAN_HANDLE_PIECE_REQUEST()) &&
+    // 	!outInfo->Get(vtkAlgorithm::CAN_PRODUCE_SUB_EXTENT())){
+    // 	std::cout << "vtkMassProperties cannot stream data!" << std::endl;
+    // 	numPieces= 1;
+    // 	}
+
+    
     std::cout << "#index\tV\tS\tnSI" << std::endl;
 
     int iRange[2];
@@ -106,25 +127,49 @@ int main (int argc, char *argv[]){
 	    ////ToDo: insert check cell array if any scalar of i exist
 
 	    thr->ThresholdBetween(i, i);
-	    filter->Update();
+
+	    double tV= 0;
+	    double tS= 0;
+	    double tI= 0;
+	    for(int myId= 0; myId < numPieces; myId++){
+		filter->SetUpdateExtent(0, myId, numPieces, 0);
+		filter->Update();
+
+		tV+= filter->GetVolume();
+		tS+= filter->GetSurfaceArea();
+		tI+= filter->GetNormalizedShapeIndex();
+
+		fprintf(stderr, "%5.1f%% (%d/%d): V: %f; S: %f\n", (myId+1)*100.0/numPieces, myId+1, numPieces, tV, tS);
+		}
 
 	    std::cout
 		<< i << "\t"
-		<< filter->GetVolume() << "\t"
-		<< filter->GetSurfaceArea() << "\t"
-		<< filter->GetNormalizedShapeIndex()
+		<< tV << "\t"
+		<< tS << "\t"
+		<< tI
 		<< std::endl;
 	    }
 	}
     else{
 	filter->SetInputConnection(triangle->GetOutputPort());
-	filter->Update();
+
+	    double tV= 0;
+	    double tS= 0;
+	    double tI= 0;
+	for(int myId= 0; myId < numPieces; myId++){
+	    filter->SetUpdateExtent(0, myId, numPieces, 0);
+	    filter->Update();
+
+	    tV+= filter->GetVolume();
+	    tS+= filter->GetSurfaceArea();
+	    tI+= filter->GetNormalizedShapeIndex();
+	    }
 
 	std::cout
 	    << "all" << "\t"
-	    << filter->GetVolume() << "\t"
-	    << filter->GetSurfaceArea() << "\t"
-	    << filter->GetNormalizedShapeIndex()
+	    << tV << "\t"
+	    << tS << "\t"
+	    << tI
 	    << std::endl;
 	}
 
