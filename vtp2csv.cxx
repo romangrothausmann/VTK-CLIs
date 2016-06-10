@@ -7,6 +7,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkDataObjectToTable.h>
+#include <vtkTable.h>
 #include <vtkDelimitedTextWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -45,7 +46,7 @@ int main (int argc, char *argv[]){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
-                  << " compress"
+                  << " FieldType"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -55,8 +56,8 @@ int main (int argc, char *argv[]){
         return -1;
         }
 
-    if(!(strcasestr(argv[2],".vtp"))) {
-        std::cerr << "The output should end with .vtp" << std::endl;
+    if(!(strcasestr(argv[2],".csv"))) {
+        std::cerr << "The output should end with .csv" << std::endl;
         return -1;
         }
 
@@ -70,19 +71,18 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
+    VTK_CREATE(vtkDataObjectToTable, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    filter->SetFieldType(atoi(argv[3])); // vtkDataObjectToTable::FIELD_DATA
     filter->Update();
+ 
+    filter->GetOutput()->Dump();
+    std::cerr << "Rows: " << filter->GetOutput()->GetNumberOfRows() << std::endl;
 
-    VTK_CREATE(vtkXMLPolyDataWriter, writer);
+    VTK_CREATE(vtkDelimitedTextWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[2]);
-    writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
-    if(atoi(argv[3]))
-        writer->SetCompressorTypeToZLib();//default
-    else
-        writer->SetCompressorTypeToNone();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     writer->Write();
 
