@@ -1,5 +1,5 @@
-////program to export point/cell/field data to CSVs
-//01: based on template.cxx
+////program to dump field data (of varying length) to (row-oriented) CSVs
+//01: based on vtp2csv.cxx
 
 
 
@@ -8,9 +8,6 @@
 #include <vtkXMLPolyDataReader.h>
 #include <vtkPolyData.h>
 #include <vtkFieldData.h>
-#include <vtkDataObjectToTable.h>
-#include <vtkTable.h>
-#include <vtkDelimitedTextWriter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -44,11 +41,9 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 2){
         std::cerr << "Usage: " << argv[0]
                   << " input"
-                  << " output"
-                  << " FieldType"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -57,12 +52,6 @@ int main (int argc, char *argv[]){
         std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
-
-    if(!(strcasestr(argv[2],".csv"))) {
-        std::cerr << "The output should end with .csv" << std::endl;
-        return -1;
-        }
-
 
     VTK_CREATE(vtkCallbackCommand, eventCallbackVTK);
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
@@ -73,35 +62,18 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    //// determin longest array
+    //// print row-oriented CSV manually
     vtkFieldData* fd= reader->GetOutput()->GetFieldData();
     int noa= fd->GetNumberOfArrays();
-    vtkIdType maxNOT= 0;
     for(int i= 0; i < noa; i++){
-	maxNOT= fd->GetArray(i)->GetNumberOfTuples() > maxNOT ? fd->GetArray(i)->GetNumberOfTuples() : maxNOT;
+    	for(vtkIdType j= 0; j < fd->GetArray(i)->GetNumberOfComponents(); j++){
+	    printf("%s:%d", fd->GetArray(i)->GetName(), j);
+	    for(vtkIdType k= 0; k < fd->GetArray(i)->GetNumberOfTuples(); k++){
+		std::cout << "," << fd->GetArray(i)->GetComponent(k, j);
+		}
+	    std::cout << std::endl;
+	    }
 	}
-    std::cerr << "maxNOT: " << maxNOT << std::endl;
-
-    //// set length of any array to longest found
-    /// works, but results are only correct for arrays whose NOT was not changed
-    for(int i= 0; i < noa; i++){
-	fd->GetArray(i)->SetNumberOfTuples(maxNOT);
-	}
-
-    VTK_CREATE(vtkDataObjectToTable, filter);
-    filter->SetInputData(0, reader->GetOutput());
-    filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    filter->SetFieldType(atoi(argv[3])); // vtkDataObjectToTable::FIELD_DATA
-    filter->Update();
- 
-    filter->GetOutput()->Dump();
-    std::cerr << "Rows: " << filter->GetOutput()->GetNumberOfRows() << std::endl;
-
-    VTK_CREATE(vtkDelimitedTextWriter, writer);
-    writer->SetInputConnection(filter->GetOutputPort());
-    writer->SetFileName(argv[2]);
-    writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    writer->Write();
 
     return EXIT_SUCCESS;
     }
