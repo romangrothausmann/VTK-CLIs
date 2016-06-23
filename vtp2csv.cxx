@@ -6,6 +6,8 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkPolyData.h>
+#include <vtkFieldData.h>
 #include <vtkDataObjectToTable.h>
 #include <vtkTable.h>
 #include <vtkDelimitedTextWriter.h>
@@ -71,8 +73,23 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
+    //// determin longest array
+    vtkFieldData* fd= reader->GetOutput()->GetFieldData();
+    int noa= fd->GetNumberOfArrays();
+    vtkIdType maxNOT= 0;
+    for(int i= 0; i < noa; i++){
+	maxNOT= fd->GetArray(i)->GetNumberOfTuples() > maxNOT ? fd->GetArray(i)->GetNumberOfTuples() : maxNOT;
+	}
+    std::cerr << "maxNOT: " << maxNOT << std::endl;
+
+    //// set length of any array to longest found
+    /// works, but results are only correct for arrays whose NOT was not changed
+    for(int i= 0; i < noa; i++){
+	fd->GetArray(i)->SetNumberOfTuples(maxNOT);
+	}
+
     VTK_CREATE(vtkDataObjectToTable, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
+    filter->SetInputData(0, reader->GetOutput());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->SetFieldType(atoi(argv[3])); // vtkDataObjectToTable::FIELD_DATA
     filter->Update();
