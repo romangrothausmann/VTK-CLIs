@@ -67,7 +67,10 @@ int main (int argc, char *argv[]){
     int noa= fd->GetNumberOfArrays();
     for(int i= 0; i < noa; i++){
     	for(vtkIdType j= 0; j < fd->GetArray(i)->GetNumberOfComponents(); j++){
-	    printf("%s:%d", fd->GetArray(i)->GetName(), j);
+	    if(fd->GetArray(i)->GetNumberOfComponents() > 1)
+		printf("%s:%d", fd->GetArray(i)->GetName(), j);
+	    else
+		printf("%s", fd->GetArray(i)->GetName());		
 	    for(vtkIdType k= 0; k < fd->GetArray(i)->GetNumberOfTuples(); k++){
 		std::cout << "," << fd->GetArray(i)->GetComponent(k, j);
 		}
