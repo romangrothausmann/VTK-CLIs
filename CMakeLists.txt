@@ -274,3 +274,8 @@ SET(CurrentExe "vtpFD2csv")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "tf_scale")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)

@@ -6,6 +6,8 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkTransform.h>
+#include <vtkTransformPolyDataFilter.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,11 +42,12 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 7){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
+                  << " x-scale y-scale z-scale"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -69,9 +72,13 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
+    vtkSmartPointer<vtkTransform> tf= vtkSmartPointer<vtkTransform>::New();
+    tf->Scale(atof(argv[4]), atof(argv[5]), atof(argv[6]));
+
+    VTK_CREATE(vtkTransformPolyDataFilter, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    filter->SetTransform(tf);
     filter->Update();
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
