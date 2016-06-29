@@ -1,11 +1,13 @@
-////program for
-//01: based on template.cxx
+////program for vtkDiscreteMarchingCubes
+//01: based on template.cxx and VTK/Examples/Medical/Cxx/GenerateModelsFromLabels.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkXMLPolyDataReader.h>
+#include <vtkImageReader2Factory.h>
+#include <vtkImageReader2.h>
+#include "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.h"
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,18 +42,14 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 6){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
+                  << " StartLabel EndLabel"
                   << std::endl;
         return EXIT_FAILURE;
-        }
-
-    if(!(strcasestr(argv[1],".vtp"))) {
-        std::cerr << "The input should end with .vtp" << std::endl;
-        return -1;
         }
 
     if(!(strcasestr(argv[2],".vtp"))) {
@@ -59,20 +57,40 @@ int main (int argc, char *argv[]){
         return -1;
         }
 
+    unsigned int startLabel = atoi(argv[4]);
+    if (startLabel > VTK_SHORT_MAX){
+        std::cout << "ERROR: startLabel is larger than " << VTK_SHORT_MAX << std::endl;
+        return EXIT_FAILURE;
+        }
+
+    unsigned int endLabel = atoi(argv[5]);
+    if (endLabel > VTK_SHORT_MAX){
+        std::cout << "ERROR: endLabel is larger than " << VTK_SHORT_MAX << std::endl;
+        return EXIT_FAILURE;
+        }
+
 
     VTK_CREATE(vtkCallbackCommand, eventCallbackVTK);
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkXMLPolyDataReader, reader);
+    VTK_CREATE(vtkImageReader2Factory, readerFactory);
+    vtkImageReader2* reader= readerFactory->CreateImageReader2(argv[1]);
+    if(!reader){
+        std::cerr << "Could not find an appropriate reader. Does file exist?" << std::endl;
+        return -1;
+        }
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader->Update();
+    reader->Update(); // does not throw an error if file cannot be read! Use CanReadFile if readerFactory ought to be avoided
 
-    VTK_CREATE(, filter);
+    VTK_CREATE(vtkDiscreteMarchingCubes, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
+    filter->GenerateValues(endLabel - startLabel + 1, startLabel, endLabel);
+    filter->ComputeNeighboursOn(); // expecting own extension to vtkDiscreteMarchingCubes
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
+    std::cerr << "Verts: " << filter->GetOutput()->GetNumberOfPoints() << " Cells: " << filter->GetOutput()->GetNumberOfCells() << std::endl;
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());

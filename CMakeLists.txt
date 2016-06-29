@@ -279,3 +279,9 @@ SET(CurrentExe "tf_scale")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "mc_discrete")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe}
+  ${CurrentExe} "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.cxx")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
