@@ -1,4 +1,4 @@
-////program for
+////program for vtkWindowedSincPolyDataFilter
 //01: based on template.cxx
 
 
@@ -6,6 +6,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkWindowedSincPolyDataFilter.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,11 +41,12 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 7){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
+                  << " NumberOfIterations NonManifoldSmoothing NormalizeCoordinates"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -69,8 +71,11 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
+    VTK_CREATE(vtkWindowedSincPolyDataFilter, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
+    filter->SetNumberOfIterations(atoi(argv[4]));
+    filter->SetNonManifoldSmoothing(atoi(argv[5]));
+    filter->SetNormalizeCoordinates(atoi(argv[6]));
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
