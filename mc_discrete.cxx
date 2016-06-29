@@ -8,6 +8,9 @@
 #include <vtkImageReader2Factory.h>
 #include <vtkImageReader2.h>
 #include "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.h"
+#include <vtkInformation.h>//for GetOutputInformation
+#include <vtkStreamingDemandDrivenPipeline.h>//for extent
+#include <vtkImageConstantPad.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -42,12 +45,13 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 6){
+    if (argc != 7){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
                   << " StartLabel EndLabel"
+                  << " cap-surface"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -85,10 +89,31 @@ int main (int argc, char *argv[]){
     reader->Update(); // does not throw an error if file cannot be read! Use CanReadFile if readerFactory ought to be avoided
 
     VTK_CREATE(vtkDiscreteMarchingCubes, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
     filter->GenerateValues(endLabel - startLabel + 1, startLabel, endLabel);
     filter->ComputeNeighboursOn(); // expecting own extension to vtkDiscreteMarchingCubes
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
+    VTK_CREATE(vtkImageConstantPad, pad);
+    pad->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+
+    if(atoi(argv[6])){
+        int extent[6];
+        reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+
+        fprintf(stderr, "extent: %d, %d, %d, %d, %d, %d\n", extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
+
+        pad->SetInputConnection(reader->GetOutputPort());
+        pad->SetOutputWholeExtent(
+            extent[0] -1, extent[1] + 1,
+            extent[2] -1, extent[3] + 1,
+            extent[4] -1, extent[5] + 1);
+        pad->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+        pad->Update();
+        filter->SetInputConnection(pad->GetOutputPort());
+        }
+    else
+        filter->SetInputConnection(reader->GetOutputPort());
+
     filter->Update();
     std::cerr << "Verts: " << filter->GetOutput()->GetNumberOfPoints() << " Cells: " << filter->GetOutput()->GetNumberOfCells() << std::endl;
 
