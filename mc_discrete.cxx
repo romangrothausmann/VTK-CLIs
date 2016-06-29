@@ -12,6 +12,9 @@
 #include <vtkStreamingDemandDrivenPipeline.h>//for extent
 #include <vtkImageConstantPad.h>
 #include <vtkXMLPolyDataWriter.h>
+#include <vtkImageAccumulate.h>
+#include <vtkImageData.h>
+#include <vtkPointData.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -127,6 +130,18 @@ int main (int argc, char *argv[]){
         writer->SetCompressorTypeToNone();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     writer->Write();
+
+    VTK_CREATE(vtkImageAccumulate, histogram);
+    histogram->SetInputConnection(reader->GetOutputPort());
+    histogram->SetComponentExtent(0, endLabel, 0, 0, 0, 0); // not sure if first 0 should be replaced by startLabel
+    histogram->SetComponentOrigin(0, 0, 0);
+    histogram->SetComponentSpacing(1, 1, 1);
+    histogram->Update();
+
+    //// print a list of labels created by dmc
+    for (unsigned int i = startLabel; i <= endLabel; i++)
+        if(histogram->GetOutput()->GetPointData()->GetScalars()->GetTuple1(i))
+            std::cout << +i << std::endl;
 
     return EXIT_SUCCESS;
     }
