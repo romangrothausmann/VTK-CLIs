@@ -76,6 +76,11 @@ int main (int argc, char *argv[]){
     filter->SetNumberOfIterations(atoi(argv[4]));
     filter->SetNonManifoldSmoothing(atoi(argv[5]));
     filter->SetNormalizeCoordinates(atoi(argv[6]));
+    filter->FeatureEdgeSmoothingOff(); // FeatureAngle and EdgeAngle ignored
+    filter->SetFeatureAngle(180); // classifying verts for smoothing if less
+    filter->SetEdgeAngle(180); // marked verts smoothed if less
+    filter->GenerateErrorScalarsOff();
+    filter->GenerateErrorVectorsOff();
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
