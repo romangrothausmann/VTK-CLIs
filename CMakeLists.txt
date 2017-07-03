@@ -51,7 +51,7 @@ SET(Required_Packages
 
 FIND_PACKAGE (VTK REQUIRED)
 IF ( VTK_FOUND )
-      INCLUDE( ${USE_VTK_FILE} )
+      INCLUDE( ${VTK_USE_FILE} ) # https://stackoverflow.com/questions/33583101/cmake-3-4-0-including-multiple-files#33585398
 ENDIF( VTK_FOUND )
 
 #Boost
