@@ -43,10 +43,13 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 3){
+    if (argc != 7){
         std::cerr << "Usage: " << argv[0]
                   << " output"
                   << " compress"
+                  << " radius"
+                  << " resT resP"
+                  << " LatLongTess"
                   << std::endl
                   << " Ell transform params read from stdin as a single line:"
                   << " sx sy sz"
@@ -67,10 +70,10 @@ int main (int argc, char *argv[]){
 
 
     VTK_CREATE(vtkSphereSource, ell);
-    ell->SetRadius(0.5);
-    ell->SetThetaResolution(100);
-    ell->SetPhiResolution(100);
-    // ell->LatLongTessellationOn();
+    ell->SetRadius(atof(argv[3]));
+    ell->SetThetaResolution(atof(argv[4]));
+    ell->SetPhiResolution(atof(argv[5]));
+    ell->SetLatLongTessellation(atoi(argv[6]));
 
     std::string str;
     std::vector<double> in;
