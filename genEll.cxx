@@ -1,11 +1,14 @@
-////program for
+////program to generate (fit) ellipsoids from a sphere source
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkXMLPolyDataReader.h>
+#include <vtkSphereSource.h>
+#include <vtkMatrix4x4.h>
+#include <vtkTransform.h>
+#include <vtkTransformPolyDataFilter.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,21 +43,20 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 3){
         std::cerr << "Usage: " << argv[0]
-                  << " input"
                   << " output"
                   << " compress"
+                  << std::endl
+                  << " Ell transform params read from stdin as a single line:"
+                  << " sx sy sz"
+                  << " tx ty tz"
+                  << " r[3x3]"
                   << std::endl;
         return EXIT_FAILURE;
         }
 
     if(!(strcasestr(argv[1],".vtp"))) {
-        std::cerr << "The input should end with .vtp" << std::endl;
-        return -1;
-        }
-
-    if(!(strcasestr(argv[2],".vtp"))) {
         std::cerr << "The output should end with .vtp" << std::endl;
         return -1;
         }
@@ -64,21 +66,54 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkXMLPolyDataReader, reader);
-    reader->SetFileName(argv[1]);
-    reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    reader->Update();
+    VTK_CREATE(vtkSphereSource, ell);
+    ell->SetRadius(0.5);
+    ell->SetThetaResolution(100);
+    ell->SetPhiResolution(100);
+    // ell->LatLongTessellationOn();
 
-    VTK_CREATE(, filter);
-    filter->SetInputConnection(0, reader->GetOutputPort());
+    std::string str;
+    std::vector<double> in;
+    if(std::getline(std::cin, str)) { // https://stackoverflow.com/a/7800876
+	std::istringstream sstr(str);
+	double n;
+	while(sstr >> n)
+	    in.push_back(n);
+	}
+    // for(int i=0; i < in.size(); ++i)
+    // 	std::cerr << in[i] << ' ';
+
+    double *IN= &in[0]; // https://stackoverflow.com/a/2923290
+    double s[3], t[3];
+
+    for(int i = 0; i < 3; i++) // https://stackoverflow.com/a/33682723
+	s[i]= in[i];
+    for(int i = 0; i < 3; i++)
+	t[i]= in[i+3];
+
+    VTK_CREATE(vtkMatrix4x4, m);
+    m->Identity(); // https://stackoverflow.com/a/37469151
+    for(int i = 0; i < 9; i++)
+	m->SetElement(i%3, i/3, in[i+6]); // https://stackoverflow.com/a/7070383
+    // m->PrintSelf(std::cerr, vtkIndent(2));
+    
+    VTK_CREATE(vtkTransform, tf);
+    tf->SetMatrix(m);
+    tf->Scale(s);
+    tf->PostMultiply();
+    tf->Translate(t);
+
+    VTK_CREATE(vtkTransformPolyDataFilter, filter);
+    filter->SetInputConnection(ell->GetOutputPort());
+    filter->SetTransform(tf);
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
-    writer->SetFileName(argv[2]);
+    writer->SetFileName(argv[1]);
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
-    if(atoi(argv[3]))
+    if(atoi(argv[2]))
         writer->SetCompressorTypeToZLib();//default
     else
         writer->SetCompressorTypeToNone();
