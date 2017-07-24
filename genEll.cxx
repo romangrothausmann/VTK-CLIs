@@ -9,6 +9,8 @@
 #include <vtkMatrix4x4.h>
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
+#include <vtkCellData.h>
+#include <vtkIntArray.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -55,6 +57,7 @@ int main (int argc, char *argv[]){
                   << " sx sy sz"
                   << " tx ty tz"
                   << " r[3x3]"
+                  << " type"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -111,6 +114,14 @@ int main (int argc, char *argv[]){
     filter->SetTransform(tf);
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
+
+    //// set all cell-scalars (for colouring) to ellType value
+    VTK_CREATE(vtkIntArray, cdata);
+    int n= filter->GetOutput()->GetNumberOfCells();
+    cdata->SetNumberOfValues(n);
+    for(int i= 0; i < n; i++)
+	cdata->SetValue(i, in[15]);	
+    filter->GetOutput()->GetCellData()->SetScalars(cdata);
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
