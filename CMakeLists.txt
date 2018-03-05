@@ -82,10 +82,14 @@ TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "marching-cubes_MPI")
+if(TARGET vtkFiltersParallelMPI)
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+ELSE()
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires VTK with vtkFiltersParallelMPI ON)")
+ENDIF()
 
 SET(CurrentExe "discrete_marching-cubes_DEPRECATED")
 ADD_EXECUTABLE(${CurrentExe}
@@ -100,10 +104,14 @@ TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "discrete_marching-cubes_MPI")
+if(TARGET vtkFiltersParallelMPI)
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe} "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.cxx")
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+ELSE()
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires VTK with vtkFiltersParallelMPI ON)")
+ENDIF()
 
 SET(CurrentExe "probe-surf2vrml")
 ADD_EXECUTABLE(${CurrentExe}
