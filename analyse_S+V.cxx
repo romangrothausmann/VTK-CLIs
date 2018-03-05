@@ -1,6 +1,7 @@
 ////program to calculate the surface of a (labled) mesh
 //01: based on template.cxx
 //02: changed to vtkMassProperties, works even for open surfaces (code for surface area seems not to relate on closeness assumption); slightly slower than former version based on vtkMeshQuality
+03: do not print last values if analysis failed: https://lorensen.github.io/VTKExamples/site/Cxx/Utilities/ObserveError/ http://www.vtk.org/Wiki/VTK/Tutorials/Callbacks http://www.vtk.org/Wiki/VTK/Examples/Cxx/Interaction/CallData
 
 
 #include <vtkSmartPointer.h>
@@ -19,6 +20,64 @@
 
 #define VTK_CREATE(type, name) vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
+
+class ErrorObserver : public vtkCommand
+{
+public:
+  ErrorObserver():
+    Error(false),
+    Warning(false),
+    ErrorMessage(""),
+    WarningMessage("") {}
+  static ErrorObserver *New()
+  {
+  return new ErrorObserver;
+  }
+  bool GetError() const
+  {
+  return this->Error;
+  }
+  bool GetWarning() const
+  {
+  return this->Warning;
+  }
+  void Clear()
+  {
+  this->Error = false;
+  this->Warning = false;
+  this->ErrorMessage = "";
+  this->WarningMessage = "";
+  }
+  virtual void Execute(vtkObject *vtkNotUsed(caller),
+                       unsigned long event,
+                       void *calldata)
+  {
+  switch(event)
+  {
+    case vtkCommand::ErrorEvent:
+      ErrorMessage = static_cast<char *>(calldata);
+      this->Error = true;
+      break;
+    case vtkCommand::WarningEvent:
+      WarningMessage = static_cast<char *>(calldata);
+      this->Warning = true;
+      break;
+  }
+  }
+  std::string GetErrorMessage()
+  {
+  return ErrorMessage;
+  }
+std::string GetWarningMessage()
+{
+  return WarningMessage;
+}
+private:
+  bool        Error;
+  bool        Warning;
+  std::string ErrorMessage;
+  std::string WarningMessage;
+};
 
 void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* clientData, void* callData){
 
@@ -108,6 +167,7 @@ int main (int argc, char *argv[]){
 	    thr->ThresholdBetween(i, i);
 	    filter->Update();
 
+	    if(!errorObserver->GetError())
 	    std::cout
 		<< i << "\t"
 		<< filter->GetVolume() << "\t"
