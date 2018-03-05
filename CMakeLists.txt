@@ -1,3 +1,6 @@
+PROJECT(VTK-CLIs)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.7)
+
 ##from http://www.cmake.org/pipermail/cmake/2008-September/023808.html
 #i.e. this is bad: SET(CMAKE_BUILD_TYPE "Release")
 # If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their definition
@@ -40,19 +43,14 @@ ENDIF()
 
 
 
-PROJECT(VTK-CLIs)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-
-
 SET(Required_Packages
   VTK
 )
 
 
 FIND_PACKAGE (VTK REQUIRED)
-IF ( VTK_FOUND )
-      INCLUDE( ${VTK_USE_FILE} ) # https://stackoverflow.com/questions/33583101/cmake-3-4-0-including-multiple-files#33585398
-ENDIF( VTK_FOUND )
+include( ${VTK_USE_FILE} ) # https://stackoverflow.com/questions/33583101/cmake-3-4-0-including-multiple-files#33585398
+include_directories(${VTK_INCLUDE_DIRS}) # https://www.vtk.org/Wiki/VTK/Build_System_Migration
 
 #Boost
 FIND_PACKAGE(Boost COMPONENTS graph)
@@ -243,10 +241,14 @@ ENDIF()
 
 IF(BUILD_vtkPolyDataToGraph)
 SET(CurrentExe "vtp2dot")
+if(TARGET vtkInfovisBoostGraphAlgorithms) # http://www.vtk.org/Wiki/VTK/Build_System_Migration#Optional_Module_Dependencies
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe} ${VTKGraphConversionsDir}/vtkPolyDataToGraph.cxx)
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+ELSE(vtkInfovisBoostGraphAlgorithms_FOUND)
+  MESSAGE(STATUS "${CurrentExe} will not be compiled (requires VTK with vtkInfovisBoostGraphAlgorithms ON)")
+ENDIF()
 ENDIF()
 
 SET(CurrentExe "vtk2vtp")
