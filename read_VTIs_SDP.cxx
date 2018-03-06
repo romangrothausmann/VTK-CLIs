@@ -1,13 +1,13 @@
-////program to test streamed reading of a VTI-file
+////program to test streamed reading of a VTP-file
 //01: based on template.cxx
 
 
 
 
 #include <vtkSmartPointer.h>
-#include <vtkXMLImageDataReader.h>
-#include <vtkStreamingDemandDrivenPipeline.h>
-#include <vtkImageData.h>
+#include <vtkXMLPolyDataReader.h>
+#include <vtkInformation.h>
+#include <vtkPolyData.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
@@ -49,8 +49,8 @@ int main (int argc, char *argv[]){
         return EXIT_FAILURE;
         }
 
-    if(!(strcasestr(argv[1],".vti"))) {
-        std::cerr << "The input should end with .vti" << std::endl;
+    if(!(strcasestr(argv[1],".vtp"))) {
+        std::cerr << "The input should end with .vtp" << std::endl;
         return -1;
         }
 
@@ -59,30 +59,25 @@ int main (int argc, char *argv[]){
     eventCallbackVTK->SetCallback(FilterEventHandlerVTK);
 
 
-    VTK_CREATE(vtkXMLImageDataReader, reader);
+    VTK_CREATE(vtkXMLPolyDataReader, reader);
     reader->SetFileName(argv[1]);
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->UpdateInformation();
 
     int numProcs= atoi(argv[2]);
-    vtkStreamingDemandDrivenPipeline* exec= vtkStreamingDemandDrivenPipeline::SafeDownCast(reader->GetExecutive());
-    // exec->SetUpdateNumberOfPieces(exec->GetOutputInformation(0), numProcs);
-    if (!exec){ // || exec->GetMaximumNumberOfPieces() < numProcs){
-        std::cerr << "Streaming not possible!" << std::endl;
-        return -1;
-        }
+
+    vtkInformation* outInfo = reader->GetOutputInformation(0);
+    // Check if reader can handle piece requests (for unstructured) or sub-extents (for structured)
+    if (!outInfo->Get(vtkAlgorithm::CAN_HANDLE_PIECE_REQUEST()) &&
+	!outInfo->Get(vtkAlgorithm::CAN_PRODUCE_SUB_EXTENT())){
+	std::cout << "Reader cannot stream data!" << std::endl;
+	numProcs= 1;
+	}
 
     unsigned long  totalPolyData= 0;
     for(int myId= 0; myId < numProcs; myId++){
-        // reader->SetUpdateExtent(0, myId, numProcs, 0);
-        // reader->Update();
-
-        // exec->SetUpdatePiece(exec->GetOutputInformation(0), myId);
-        // exec->Update();
-
-        exec->SetUpdateExtent(0, myId, numProcs, 0);
+        reader->SetUpdateExtent(0, myId, numProcs, 0);
         reader->Update();
-        //exec->Update();
 
         unsigned long  subtotalPolyData= reader->GetOutput()->GetNumberOfCells();
         totalPolyData+= subtotalPolyData;
