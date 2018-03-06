@@ -76,7 +76,11 @@ int main (int argc, char *argv[]){
 
     unsigned long  totalPolyData= 0;
     for(int myId= 0; myId < numProcs; myId++){
+#if (VTK_MAJOR_VERSION >= 8) || ( VTK_MAJOR_VERSION == 7 && VTK_MINOR_VERSION > 1 ) // http://gdcm.sourceforge.net/2.4/html/vtkGDCMImageReader_8h_source.html
+        reader->UpdatePiece(0, myId, numProcs, 0); // https://www.vtk.org/doc/nightly/html/VTK-7-1-Changes.html
+#else
         reader->SetUpdateExtent(0, myId, numProcs, 0);
+#endif
         reader->Update();
 
         unsigned long  subtotalPolyData= reader->GetOutput()->GetNumberOfCells();
