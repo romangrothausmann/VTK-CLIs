@@ -1,6 +1,6 @@
 // program to apply vtkDiscreteMarchingCubes
 //01: based on discret_marching_cubes05.cxx
-
+//deprecated, use mc_discrete + smooth-ws
 
 
 
