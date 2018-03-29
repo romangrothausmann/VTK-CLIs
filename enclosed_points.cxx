@@ -1,4 +1,6 @@
-////program for
+////program for vtkSelectEnclosedPoints
+///// label (Select) (mesh-) points enclosed by a closed, manifold mesh
+///// combine with vtkThreshold to obtain a "ragged" boolean operation
 //01: based on template.cxx
 
 
@@ -6,6 +8,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkSelectEnclosedPoints.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,11 +43,14 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 7){
         std::cerr << "Usage: " << argv[0]
                   << " input"
+                  << " mask-mesh"
                   << " output"
                   << " compress"
+                  << " check-closure"
+                  << " tolerance (fraction of the bounding box of the enclosing surface!)"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -55,6 +61,11 @@ int main (int argc, char *argv[]){
         }
 
     if(!(strcasestr(argv[2],".vtp"))) {
+        std::cerr << "The mask-mesh should end with .vtp" << std::endl;
+        return -1;
+        }
+
+    if(!(strcasestr(argv[3],".vtp"))) {
         std::cerr << "The output should end with .vtp" << std::endl;
         return -1;
         }
@@ -69,16 +80,24 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
+    VTK_CREATE(vtkXMLPolyDataReader, reader2);
+    reader2->SetFileName(argv[2]);
+    reader2->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    reader2->Update();
+
+    VTK_CREATE(vtkSelectEnclosedPoints, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
+    filter->SetSurfaceConnection(reader2->GetOutputPort());
+    filter->SetCheckSurface(atoi(argv[5]));
+    filter->SetTolerance(atof(argv[6]));
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
-    writer->SetFileName(argv[2]);
+    writer->SetFileName(argv[3]);
     writer->SetDataModeToBinary();//SetDataModeToAscii()//SetDataModeToAppended()
-    if(atoi(argv[3]))
+    if(atoi(argv[4]))
         writer->SetCompressorTypeToZLib();//default
     else
         writer->SetCompressorTypeToNone();
