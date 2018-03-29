@@ -1,14 +1,14 @@
-////program for vtkSelectEnclosedPoints
-///// label (Select) (mesh-) points enclosed by a closed, manifold mesh
-///// combine with vtkThreshold to obtain a "ragged" boolean operation
-//01: based on template.cxx
+////program for vtkLoopBooleanPolyDataFilter
+///// newer implementation (2016, https://gitlab.kitware.com/vtk/vtk/merge_requests/1752) than vtkBooleanOperationPolyDataFilter (2011)
+///// should solve some problems of vtkBooleanOperationPolyDataFilter (see article)
+//01: based on enclosed_points.cxx and http://lorensen.github.io/VTKExamples/site/Cxx/PolyData/LoopBooleanPolyDataFilter/
 
 
 
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
-#include <vtkSelectEnclosedPoints.h>
+#include <vtkLoopBooleanPolyDataFilter.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -43,14 +43,14 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 7){
+    if (argc != 6){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " mask-mesh"
                   << " output"
                   << " compress"
-                  << " check-closure"
-                  << " tolerance (fraction of the bounding box of the enclosing surface!)"
+                  << " operation"
+//                  << " tolerance" // fraction of the bounding box of the enclosing surface?
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -85,11 +85,11 @@ int main (int argc, char *argv[]){
     reader2->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader2->Update();
 
-    VTK_CREATE(vtkSelectEnclosedPoints, filter);
+    VTK_CREATE(vtkLoopBooleanPolyDataFilter, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
-    filter->SetSurfaceConnection(reader2->GetOutputPort());
-    filter->SetCheckSurface(atoi(argv[5]));
-    filter->SetTolerance(atof(argv[6]));
+    filter->SetInputConnection(1, reader2->GetOutputPort());
+    filter->SetOperation(atoi(argv[5]));
+    // filter->SetTolerance(atof(argv[6]));
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
