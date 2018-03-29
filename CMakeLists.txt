@@ -187,11 +187,11 @@ ADD_EXECUTABLE(${CurrentExe}
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
-SET(CurrentExe "read_VTPs_SDP")
-ADD_EXECUTABLE(${CurrentExe}
-  ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
-install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+# SET(CurrentExe "read_VTPs_SDP")
+# ADD_EXECUTABLE(${CurrentExe}
+#   ${CurrentExe})
+# TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+# install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "smooth-ws")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
