@@ -45,9 +45,10 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 2){
+    if (argc != 3){
         std::cerr << "Usage: " << argv[0]
                   << " input"
+                  << " all"
                   << std::endl;
         std::cerr << "Value calculation based on the discrete form of the divergence theorem." << std::endl;
         std::cerr << "Apart from the surface area, the calculations assume a closed mesh!" << std::endl;
@@ -101,7 +102,7 @@ int main (int argc, char *argv[]){
 
 	fprintf(stderr, "range of cell scalars: %d - %d\n", iRange[0], iRange[1]);
 	}
-    if(iRange[1]-iRange[0]){
+    if((iRange[1]-iRange[0]) && ! atoi(argv[2])){
 	for (unsigned int i= iRange[0]; i <= iRange[1]; i++){
 	    ////ToDo: insert check cell array if any scalar of i exist
 
