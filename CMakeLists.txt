@@ -320,3 +320,9 @@ SET(CurrentExe "bool-op")
 ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
+
+SET(CurrentExe "dupli-cell_removal")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe}
+  ${CurrentExe} "filter/external/RemoveDuplicatePolys/vtkCleanPolyDataPolys.cxx")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
+install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
