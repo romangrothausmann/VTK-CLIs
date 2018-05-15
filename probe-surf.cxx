@@ -43,11 +43,12 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 5){
+    if (argc != 6){
         std::cerr << "Usage: " << argv[0]
                   << " input-surf input-vol"
                   << " output"
                   << " compress"
+                  << " nearest_neighbor_interpolation"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -90,6 +91,7 @@ int main (int argc, char *argv[]){
     VTK_CREATE(vtkProbeFilter, filter);
     filter->SetInputConnection(reader0->GetOutputPort());
     filter->SetSourceConnection(reader1->GetOutputPort());
+    filter->SetCategoricalData(atoi(argv[5]));
     filter->PassPointArraysOff();
     filter->PassCellArraysOff();
     filter->PassFieldArraysOff();
