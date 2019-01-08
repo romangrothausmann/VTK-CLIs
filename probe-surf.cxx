@@ -108,6 +108,7 @@ int main (int argc, char *argv[]){
     else
         writer->SetCompressorTypeToNone();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    writer->SetHeaderTypeToUInt64();
     writer->Write();
 
     return EXIT_SUCCESS;
