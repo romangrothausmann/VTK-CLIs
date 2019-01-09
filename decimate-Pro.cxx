@@ -1,4 +1,4 @@
-////program for
+////program for vtkDecimatePro
 //01: based on template.cxx
 
 
@@ -6,6 +6,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
+#include <vtkDecimatePro.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -40,11 +41,14 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 4){
+    if (argc != 7){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
+                  << " reduction"
+                  << " preserveTopo"
+                  << " delBoundaryVerts"
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -69,8 +73,15 @@ int main (int argc, char *argv[]){
     reader->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader->Update();
 
-    VTK_CREATE(, filter);
+    VTK_CREATE(vtkDecimatePro, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
+    filter->SetTargetReduction(atof(argv[4]));
+    filter->SetPreserveTopology(atoi(argv[5]));
+    filter->SetBoundaryVertexDeletion(atoi(argv[6]));
+    filter->PreSplitMeshOff();
+    filter->SplittingOff();
+    // filter->SetFeatureAngle(atoi(argv[]));
+    // filter->SetMaximumError(atoi(argv[]));
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
