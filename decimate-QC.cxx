@@ -1,4 +1,5 @@
 ////program for vtkQuadricClustering
+///point data only preserved with restrict-output-verts-to-input-verts (SetUseInputPoints)
 //01: based on template.cxx
 
 
@@ -42,12 +43,18 @@ void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* c
 
 int main (int argc, char *argv[]){
 
-    if (argc != 5){
+    if (argc != 8){
         std::cerr << "Usage: " << argv[0]
                   << " input"
                   << " output"
                   << " compress"
-                  << " devisions"
+                  << " X-extent_devisions"
+                  << " Y-extent_devisions"
+                  << " Z-extent_devisions"
+                  << " restrict-output-verts-to-input-verts"
+                  << std::endl;
+        std::cerr << std::endl
+		  << "point data only preserved with restrict-output-verts-to-input-verts" 
                   << std::endl;
         return EXIT_FAILURE;
         }
@@ -78,8 +85,14 @@ int main (int argc, char *argv[]){
     VTK_CREATE(vtkQuadricClustering, filter);
     filter->SetInputConnection(0, triangulate->GetOutputPort());
     filter->SetNumberOfXDivisions(atoi(argv[4]));
-    filter->SetNumberOfYDivisions(atoi(argv[4]));
-    filter->SetNumberOfZDivisions(atoi(argv[4]));
+    filter->SetNumberOfYDivisions(atoi(argv[5]));
+    filter->SetNumberOfZDivisions(atoi(argv[6]));
+    filter->SetUseInputPoints(atoi(argv[7]));
+    filter->CopyCellDataOff();
+    filter->UseFeatureEdgesOff();
+    filter->UseFeaturePointsOff();
+    filter->UseInternalTrianglesOn();
+    filter->PreventDuplicateCellsOn();
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
 
