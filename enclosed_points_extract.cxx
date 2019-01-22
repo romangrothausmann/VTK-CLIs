@@ -8,7 +8,7 @@
 
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataReader.h>
-#include <vtkSelectEnclosedPoints.h>
+#include <vtkExtractEnclosedPoints.h>
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -85,7 +85,7 @@ int main (int argc, char *argv[]){
     reader2->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     reader2->Update();
 
-    VTK_CREATE(vtkSelectEnclosedPoints, filter);
+    VTK_CREATE(vtkExtractEnclosedPoints, filter);
     filter->SetInputConnection(0, reader->GetOutputPort());
     filter->SetSurfaceConnection(reader2->GetOutputPort());
     filter->SetCheckSurface(atoi(argv[5]));
