@@ -9,6 +9,9 @@
 #include <vtkImageReader2.h>
 #include <vtkXMLPolyDataReader.h>
 #include <vtkProbeFilter.h>
+#include <vtkDataSet.h> // GetOutput()
+#include <vtkPointData.h> // GetPointData()
+#include <vtkDataArray.h> // GetScalars()
 #include <vtkXMLPolyDataWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -98,7 +101,9 @@ int main (int argc, char *argv[]){
     filter->ComputeToleranceOn();
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->Update();
-
+    
+    filter->GetOutput()->GetPointData()->GetScalars()->SetName("ActiveScalarsOfProbeFilter"); // name acitve scalars, otherwise overwritten by e.g. vtkSelectEnclosedPoints: http://vtk.1045678.n5.nabble.com/Filter-to-change-vtkDataArray-name-td3230591.html
+    
     VTK_CREATE(vtkXMLPolyDataWriter, writer);
     writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[3]);
