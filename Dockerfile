@@ -10,9 +10,9 @@ FROM ubuntu:18.04 as system
 FROM system as builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     git \
     ca-certificates `# essential for git over https` \
-    cmake \
     build-essential \
     automake pkgconf libtool bison flex python python-mako zlib1g-dev libexpat1-dev llvm-dev gettext \
     libboost-dev
@@ -38,6 +38,10 @@ RUN cd mesa && \
     make -j"$(nproc)" install
 
 ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/opt/mesa/lib/"
+
+### cmake independent of distro version
+RUN curl -s https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o cmake.sh
+RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
 
 ### VTK
 RUN git clone -b v8.1.2 --depth 1 https://gitlab.kitware.com/vtk/vtk.git
