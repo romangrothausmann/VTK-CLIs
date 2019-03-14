@@ -1,0 +1,5 @@
+**
+!*.cxx
+!CMakeLists.txt
+!filter
+!filters_mod
