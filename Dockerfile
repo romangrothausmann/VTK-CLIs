@@ -44,7 +44,7 @@ RUN curl -s https://cmake.org/files/v3.11/cmake-3.11.4-Linux-x86_64.sh -o cmake.
 RUN sh cmake.sh --prefix=/usr --exclude-subdir --skip-license
 
 ### VTK
-RUN git clone -b v8.1.2 --depth 1 https://gitlab.kitware.com/vtk/vtk.git
+RUN git clone https://gitlab.kitware.com/vtk/vtk.git && cd vtk && git checkout 7e859e1556
 
 RUN mkdir -p VTK_build && \
     cd VTK_build && \
