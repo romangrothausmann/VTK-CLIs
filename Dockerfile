@@ -59,5 +59,6 @@ COPY --from=builder /opt/vtk/ /opt/vtk/
 COPY --from=builder /opt/VTK-CLIs/ /opt/VTK-CLIs/
 
 ENV PATH "/opt/VTK-CLIs/bin/:${PATH}"
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/opt/vtk/lib/"
 
 WORKDIR /data
