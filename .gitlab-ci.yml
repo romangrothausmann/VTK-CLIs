@@ -59,7 +59,7 @@ test01:
     - "docker run --rm
                  $IMAGE_TAG:test
                  mc_discrete
-                 2>&1 | grep 'Usage:' "
+                 2>&1 | tee /dev/stderr | grep 'Usage:' "
   retry: 2
 
 .test: &test
