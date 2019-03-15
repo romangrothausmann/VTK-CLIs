@@ -27,7 +27,6 @@ RUN mkdir -p VTK_build && \
 	  -DBUILD_SHARED_LIBS=ON \
 	  -DBUILD_TESTING=OFF \
 	  -DVTK_Group_Qt=OFF \
-	  -DVTK_Group_Rendering=OFF \
 	  -DVTK_Group_StandAlone=ON \
 	  -DVTK_RENDERING_BACKEND=None \
 	  -DModule_vtkInfovisBoostGraphAlgorithms=ON \
