@@ -49,7 +49,7 @@ build:
     - docker push $IMAGE_TAG:test
   retry: 2
 
-test01:
+.test00: &test00
   stage: test
   variables:
     GIT_STRATEGY: none
@@ -58,7 +58,7 @@ test01:
     - set +o pipefail # essential if return-value of pipe is used to determine job status
     - "docker run --rm
                  $IMAGE_TAG:test
-                 mc_discrete
+                 $CI_JOB_NAME
                  2>&1 | tee /dev/stderr | grep 'Usage:' "
   retry: 2
 
@@ -71,6 +71,12 @@ test01:
                  $IMAGE_TAG:test
                  $CMD
   retry: 2
+
+mc_discrete:
+  <<: *test00
+
+vtp2x3d:
+  <<: *test00
 
 release:
   stage: release
