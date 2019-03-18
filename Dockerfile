@@ -1,7 +1,7 @@
 ################################################################################
 # base system
 ################################################################################
-FROM ubuntu:16.04 as system
+FROM ubuntu:18.04 as system
 
 
 ################################################################################
@@ -14,9 +14,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates `# essential for git over https` \
     cmake \
     build-essential \
-    libboost-dev libosmesa6-dev
-    
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/lib/x86_64-linux-gnu/"
+    automake pkgconf libtool bison flex python python-mako zlib1g-dev libexpat1-dev llvm-dev gettext \
+    libboost-dev
+
+### OSMesa
+RUN git clone -b mesa-18.3.4 --depth 1 https://gitlab.freedesktop.org/mesa/mesa
+
+RUN cd mesa && \
+    NOCONFIGURE=1 ./autogen.sh && \
+    ./configure \
+    	  --prefix=/opt/mesa \
+  	  --enable-opengl --disable-gles1 --disable-gles2   \
+  	  --disable-va --disable-xvmc --disable-vdpau       \
+  	  --enable-shared-glapi                             \
+  	  --disable-texture-float                           \
+  	  --enable-gallium-llvm --enable-llvm-shared-libs   \
+  	  --with-gallium-drivers=swrast,swr                 \
+  	  --disable-dri --with-dri-drivers=                 \
+  	  --disable-egl --with-egl-platforms= --disable-gbm \
+  	  --disable-glx                                     \
+  	  --disable-osmesa --enable-gallium-osmesa && \
+    make -j"$(nproc)" && \
+    make -j"$(nproc)" install
+
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/opt/mesa/lib/"
 
 ### VTK
 RUN git clone -b v8.1.2 --depth 1 https://gitlab.kitware.com/vtk/vtk.git
@@ -32,7 +53,8 @@ RUN mkdir -p VTK_build && \
 	  -DVTK_Group_StandAlone=ON \
 	  -DVTK_RENDERING_BACKEND=OpenGL2 \
 	  -DVTK_OPENGL_HAS_OSMESA=ON \
-	  -DOSMESA_LIBRARY=/usr/lib/x86_64-linux-gnu/libOSMesa.so \
+	  -DOSMESA_INCLUDE_DIR=/opt/mesa/include \
+	  -DOSMESA_LIBRARY=/opt/mesa/lib/libOSMesa.so \
 	  -DVTK_USE_X=OFF \
 	  -DModule_vtkInfovisBoostGraphAlgorithms=ON \
 	  -DModule_vtkIOExport=ON \
@@ -61,10 +83,14 @@ RUN mkdir -p /build/ && \
 FROM system as install
 
 COPY --from=builder /opt/vtk/ /opt/vtk/
+COPY --from=builder /opt/mesa/ /opt/mesa/
 COPY --from=builder /opt/VTK-CLIs/ /opt/VTK-CLIs/
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libosmesa6
+    libllvm6.0
+
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/opt/vtk/lib/"
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/opt/mesa/lib/"
 
 ENV PATH "/opt/VTK-CLIs/bin/:${PATH}"
 
