@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates `# essential for git over https` \
     cmake \
     build-essential \
-    automake pkgconf libtool bison flex python python-mako zlib1g-dev libexpat1-dev llvm-dev gettext \
+    automake pkgconf libtool bison flex python python-mako zlib1g-dev libexpat1-dev x11proto-dev libx11-dev libxext-dev libx11-xcb-dev libxcb-dri2-0-dev libxcb-xfixes0-dev llvm-dev gettext `# apt-get build-dep mesa # needs extra source URIs` \
     libboost-dev
 
 ### OSMesa
@@ -32,7 +32,7 @@ RUN cd mesa && \
   	  --with-gallium-drivers=swrast,swr                 \
   	  --disable-dri --with-dri-drivers=                 \
   	  --disable-egl --with-egl-platforms= --disable-gbm \
-  	  --disable-glx                                     \
+  	  --enable-glx --with-platforms=x11                 \
   	  --disable-osmesa --enable-gallium-osmesa && \
     make -j"$(nproc)" && \
     make -j"$(nproc)" install
@@ -66,12 +66,16 @@ RUN mkdir -p VTK_build && \
 ### VTK-CLIs
 COPY . /code/
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    freeglut3-dev
+
 RUN mkdir -p /build/ && \
     cd /build/ && \
     cmake \
     	  -DCMAKE_INSTALL_PREFIX=/opt/VTK-CLIs/ \
 	  -DCMAKE_PREFIX_PATH=/opt/vtk/lib/cmake/ \
 	  -DCMAKE_BUILD_TYPE=Release \
+	  -DCMAKE_CXX_FLAGS=-I/opt/mesa/include/ \
 	  /code/ && \
     make -j"$(nproc)" && \
     make -j"$(nproc)" install
