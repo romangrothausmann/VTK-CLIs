@@ -93,8 +93,8 @@ int main (int argc, char *argv[]){
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     filter->SetFieldType(atoi(argv[3])); // vtkDataObjectToTable::FIELD_DATA
     filter->Update();
- 
-    filter->GetOutput()->Dump();
+
+    // nice but bad for large datasets: filter->GetOutput()->Dump();
     std::cerr << "Rows: " << filter->GetOutput()->GetNumberOfRows() << std::endl;
 
     VTK_CREATE(vtkDelimitedTextWriter, writer);
