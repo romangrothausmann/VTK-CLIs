@@ -12,11 +12,12 @@
 #include <vtkXMLPolyDataReader.h>
 #include <vtkProbeFilter.h>
 #include <vtkColorTransferFunction.h>
+#include <vtkPolyDataMapper.h>
 #include <vtkUnsignedCharArray.h>
 #include <vtkPolyData.h>
 #include <vtkDoubleArray.h>
 #include <vtkImageData.h>//reader1->GetOutput()
-#include <vtkPointData.h>
+#include <vtkPointData.h>//reader1->GetOutput()->GetPointData()
 #include <vtkPLYWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -117,38 +118,19 @@ int main (int argc, char *argv[]){
     lut->AddRGBPoint(atof(argv[5]),1,0,0);//red
     lut->SetScaleToLinear();
 
-    //// create color array from LUT: https://lorensen.github.io/VTKExamples/site/Cxx/Visualization/AssignCellColorsFromLUT/
-    vtkSmartPointer<vtkUnsignedCharArray> colorData= vtkSmartPointer<vtkUnsignedCharArray>::New();
-    colorData->SetName("Colors"); // naming possibly essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
-    colorData->SetNumberOfComponents(3);
-
-    for (vtkIdType i= 0; i < filter->GetOutput()->GetNumberOfPoints(); i++){
-	double rgb[3], gray;
-	unsigned char ucrgb[3];
-
-	vtkSmartPointer<vtkDoubleArray> pData= vtkDoubleArray::SafeDownCast(filter->GetOutput()->GetPointData()->GetArray(reader1->GetOutput()->GetPointData()->GetArrayName(0)));
-	std::cerr << "array for coloring" << std::endl;
-	gray= pData->GetValue(i);
-	lut->GetColor(gray, rgb);
-	for (size_t j = 0; j < 3; ++j){
-	    ucrgb[j] = static_cast<unsigned char>(rgb[j] * 255);
-	    }
-	colorData->InsertNextTuple3(ucrgb[0], ucrgb[1], ucrgb[2]);
-
-	std::cerr << "(";
-	PrintColour<double[3]>(rgb);
-	std::cerr << ") (";
-	PrintColour<unsigned char[3]>(ucrgb);
-	std::cerr << ")" << std::endl;
-	}
-    
-    filter->GetOutput()->GetPointData()->SetScalars(colorData);
+    vtkSmartPointer<vtkPolyDataMapper> mapper= vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection(filter->GetOutputPort());
+    mapper->SetLookupTable(lut);
+    mapper->SetScalarModeToUsePointFieldData();//only then is SelectColorArray used
+    mapper->SelectColorArray(reader1->GetOutput()->GetPointData()->GetArrayName(0));//"MetaImage"
+    //mapper->SelectColorArray(filter->GetValidPointMaskArrayName());//"vtkValidPointMask"
+    mapper->ScalarVisibilityOn();//seems to be default
+    mapper->UseLookupTableScalarRangeOn();//essential!
 
     vtkSmartPointer<vtkPLYWriter> writer= vtkSmartPointer<vtkPLYWriter>::New();
-    writer->SetInputData(filter->GetOutput());
+    writer->SetInputData(mapper->GetInput());
     writer->SetFileName(argv[3]);
     writer->SetArrayName("Colors"); // essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
-    writer->EnableAlphaOff();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     std::cerr << "PLY export... ";
     writer->Write();
