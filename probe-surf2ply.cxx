@@ -1,5 +1,5 @@
-// program to apply vtkProbeFilter and to save result as WRL/VRML
-//01: based on template.cxx
+// program to apply vtkProbeFilter and to save result as PLY which supports colors, does not need scene and can be imported into blender
+//01: based on probe-surf2x3d.cxx
 
 
 
@@ -17,11 +17,25 @@
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
-#include <vtkX3DExporter.h>
+#include <vtkPLYWriter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
 
+
+//// Create the cell data using the colors from a LUT: https://lorensen.github.io/VTKExamples/site/Cxx/Visualization/AssignCellColorsFromLUT/
+void MakeCellData(size_t const& tableSize, vtkLookupTable* lut, vtkUnsignedCharArray* colors){
+    for (size_t i = 1; i < tableSize; i++){
+	double rgb[3];
+	unsigned char ucrgb[3];
+
+	lut->GetColor(static_cast<double>(i) / (tableSize - 1), rgb);
+	for (size_t j = 0; j < 3; ++j){
+	    ucrgb[j] = static_cast<unsigned char>(rgb[j] * 255);
+	    }
+	colors->InsertNextTuple3(ucrgb[0], ucrgb[1], ucrgb[2]);
+	}
+    }
 
 void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* clientData, void* callData){
 
@@ -59,8 +73,8 @@ int main (int argc, char *argv[]){
         return -1;
         }
 
-    if(!(strcasestr(argv[3],".x3d"))) {
-        std::cerr << "The output should end with .x3d" << std::endl;
+    if(!(strcasestr(argv[3],".ply"))) {
+        std::cerr << "The output should end with .ply" << std::endl;
         return -1;
         }
 
@@ -100,35 +114,18 @@ int main (int argc, char *argv[]){
     lut->AddRGBPoint(atof(argv[5]),1,0,0);//red
     lut->SetScaleToLinear();
 
-    vtkSmartPointer<vtkPolyDataMapper> mapper= vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(filter->GetOutputPort());
-    mapper->SetLookupTable(lut);
-    mapper->SetScalarModeToUsePointFieldData();//only then is SelectColorArray used
-    mapper->SelectColorArray(reader1->GetOutput()->GetPointData()->GetArrayName(0));//"MetaImage"
-    //mapper->SelectColorArray(filter->GetValidPointMaskArrayName());//"vtkValidPointMask"
-    mapper->ScalarVisibilityOn();//seems to be default
-    mapper->UseLookupTableScalarRangeOn();//essential!
+    //// create color array from LUT: https://lorensen.github.io/VTKExamples/site/Cxx/Visualization/AssignCellColorsFromLUT/
+    vtkSmartPointer<vtkUnsignedCharArray> colorData= vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colorData->SetName("Colors"); // naming possibly essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
+    colorData->SetNumberOfComponents(3);
+    MakeCellData(tableSize, lut, colorData);
 
-    vtkSmartPointer<vtkActor> actor= vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
-
-    vtkSmartPointer<vtkRenderer> renderer= vtkSmartPointer<vtkRenderer>::New();
-    renderer->AddActor(actor);
-    renderer->SetBackground(1, 1, 1);//white
-
-    vtkSmartPointer<vtkRenderWindow> renderWindow= vtkSmartPointer<vtkRenderWindow>::New();
-    //renderWindow->OffScreenRenderingOn();
-    renderWindow->AddRenderer(renderer);
-
-    vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor= vtkSmartPointer<vtkRenderWindowInteractor>::New();
-    renderWindowInteractor->SetRenderWindow(renderWindow);
-
-    vtkSmartPointer<vtkX3DExporter> writer= vtkSmartPointer<vtkX3DExporter>::New();
+    vtkSmartPointer<vtkPLYWriter> writer= vtkSmartPointer<vtkPLYWriter>::New();
     writer->SetInput(renderWindow);
     writer->SetFileName(argv[3]);
-    //writer->SetSpeed(5.5)//default 4
+    writer->SetArrayName("Colors"); // essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
-    std::cerr << "X3D export... ";
+    std::cerr << "PLY export... ";
     writer->Write();
     std::cerr << "done." << std::endl;
 
