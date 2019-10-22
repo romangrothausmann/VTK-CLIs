@@ -1,5 +1,6 @@
 // program to apply vtkProbeFilter and to save result as PLY which supports colors, does not need scene and can be imported into blender
 //01: based on probe-surf2x3d.cxx
+// color array, mapper not needed but also interesting:
 // https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/
 // https://lorensen.github.io/VTKExamples/site/Cxx/Visualization/AssignCellColorsFromLUT/
 
@@ -12,10 +13,6 @@
 #include <vtkXMLPolyDataReader.h>
 #include <vtkProbeFilter.h>
 #include <vtkColorTransferFunction.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkUnsignedCharArray.h>
-#include <vtkPolyData.h>
-#include <vtkDoubleArray.h>
 #include <vtkImageData.h>//reader1->GetOutput()
 #include <vtkPointData.h>//reader1->GetOutput()->GetPointData()
 #include <vtkPLYWriter.h>
@@ -23,23 +20,6 @@
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
 
-
-template <typename T>
-void PrintColour(T& rgb)
-{
-  // Don't do this in real code! Range checking etc. is needed.
-  for (size_t i = 0; i < 3; ++i)
-  {
-    if (i < 2)
-    {
-      std::cout << static_cast<double>(rgb[i]) << " ";
-    }
-    else
-    {
-      std::cout << static_cast<double>(rgb[i]);
-    }
-  }
-}
 
 void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* clientData, void* callData){
 
@@ -118,19 +98,12 @@ int main (int argc, char *argv[]){
     lut->AddRGBPoint(atof(argv[5]),1,0,0);//red
     lut->SetScaleToLinear();
 
-    vtkSmartPointer<vtkPolyDataMapper> mapper= vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(filter->GetOutputPort());
-    mapper->SetLookupTable(lut);
-    mapper->SetScalarModeToUsePointFieldData();//only then is SelectColorArray used
-    mapper->SelectColorArray(reader1->GetOutput()->GetPointData()->GetArrayName(0));//"MetaImage"
-    //mapper->SelectColorArray(filter->GetValidPointMaskArrayName());//"vtkValidPointMask"
-    mapper->ScalarVisibilityOn();//seems to be default
-    mapper->UseLookupTableScalarRangeOn();//essential!
-
     vtkSmartPointer<vtkPLYWriter> writer= vtkSmartPointer<vtkPLYWriter>::New();
-    writer->SetInputData(mapper->GetInput());
+    writer->SetInputConnection(filter->GetOutputPort());
     writer->SetFileName(argv[3]);
-    writer->SetArrayName("Colors"); // essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
+    writer->SetArrayName(reader1->GetOutput()->GetPointData()->GetArrayName(0));
+    writer->SetLookupTable(lut);
+    writer->EnableAlphaOff();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     std::cerr << "PLY export... ";
     writer->Write();
