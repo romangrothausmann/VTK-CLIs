@@ -122,13 +122,13 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 SET(CurrentExe "probe-surf2vrml")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "-lglut -lGL")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "-lglut -lGL -lX11")
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "probe-surf2x3d")
 ADD_EXECUTABLE(${CurrentExe}
   ${CurrentExe})
-TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "-lglut -lGL")
+TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries} "-lglut -lGL -lX11")
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "pvtp2vtp")
