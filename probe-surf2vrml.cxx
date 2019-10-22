@@ -123,15 +123,14 @@ int main (int argc, char *argv[]){
     vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor= vtkSmartPointer<vtkRenderWindowInteractor>::New();
     renderWindowInteractor->SetRenderWindow(renderWindow);
 
-    renderWindow->Render();
-    renderWindowInteractor->Start();
-
     vtkSmartPointer<vtkVRMLExporter> writer= vtkSmartPointer<vtkVRMLExporter>::New();
     writer->SetInput(renderWindow);
     writer->SetFileName(argv[3]);
     //writer->SetSpeed(5.5)//default 4
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
+    std::cerr << "VRML export... ";
     writer->Write();
+    std::cerr << "done." << std::endl;
 
     return EXIT_SUCCESS;
     }
