@@ -13,10 +13,6 @@
 #include <vtkPolyDataMapper.h>//as input is definitly vtkPolyData othersiwe use vtkDataSetMapper
 #include <vtkImageData.h>//reader1->GetOutput()
 #include <vtkPointData.h>//reader1->GetOutput()->GetPointData()
-#include <vtkActor.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
 #include <vtkPLYWriter.h>
 
 #include <vtkCallbackCommand.h>
@@ -114,16 +110,19 @@ int main (int argc, char *argv[]){
     lut->AddRGBPoint(atof(argv[5]),1,0,0);//red
     lut->SetScaleToLinear();
 
-    //// create color array from LUT: https://lorensen.github.io/VTKExamples/site/Cxx/Visualization/AssignCellColorsFromLUT/
-    vtkSmartPointer<vtkUnsignedCharArray> colorData= vtkSmartPointer<vtkUnsignedCharArray>::New();
-    colorData->SetName("Colors"); // naming possibly essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
-    colorData->SetNumberOfComponents(3);
-    MakeCellData(tableSize, lut, colorData);
+    vtkSmartPointer<vtkPolyDataMapper> mapper= vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection(filter->GetOutputPort());
+    mapper->SetLookupTable(lut);
+    mapper->SetScalarModeToUsePointFieldData();//only then is SelectColorArray used
+    mapper->SelectColorArray(reader1->GetOutput()->GetPointData()->GetArrayName(0));//"MetaImage"
+    //mapper->SelectColorArray(filter->GetValidPointMaskArrayName());//"vtkValidPointMask"
+    mapper->ScalarVisibilityOn();//seems to be default
+    mapper->UseLookupTableScalarRangeOn();//essential!
 
     vtkSmartPointer<vtkPLYWriter> writer= vtkSmartPointer<vtkPLYWriter>::New();
-    writer->SetInput(renderWindow);
+    writer->SetInput(mapper->GetOutputPort());
     writer->SetFileName(argv[3]);
-    writer->SetArrayName("Colors"); // essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
+    //writer->SetArrayName("Colors"); // essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     std::cerr << "PLY export... ";
     writer->Write();
