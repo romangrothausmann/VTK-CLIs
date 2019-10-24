@@ -23,6 +23,23 @@
 #include <vtkCommand.h>
 
 
+template <typename T>
+void PrintColour(T& rgb)
+{
+  // Don't do this in real code! Range checking etc. is needed.
+  for (size_t i = 0; i < 3; ++i)
+  {
+    if (i < 2)
+    {
+      std::cout << static_cast<double>(rgb[i]) << " ";
+    }
+    else
+    {
+      std::cout << static_cast<double>(rgb[i]);
+    }
+  }
+}
+
 void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* clientData, void* callData){
 
     vtkAlgorithm *filter= static_cast<vtkAlgorithm*>(caller);
@@ -106,19 +123,23 @@ int main (int argc, char *argv[]){
     colorData->SetNumberOfComponents(3);
 
     for (vtkIdType i= 0; i < filter->GetOutput()->GetNumberOfPoints(); i++){
-	double rgb[3];
+	double rgb[3], gray;
 	unsigned char ucrgb[3];
-	
-	lut->GetColor(
-	    vtkDoubleArray::SafeDownCast(
-		filter->GetOutput()->GetPointData()->GetArray(
-		    reader1->GetOutput()->GetPointData()->GetArrayName(0)
-		    )
-		)->GetValue(i), rgb);
+
+	vtkSmartPointer<vtkDoubleArray> pData= vtkDoubleArray::SafeDownCast(filter->GetOutput()->GetPointData()->GetArray(reader1->GetOutput()->GetPointData()->GetArrayName(0)));
+	std::cerr << "array for coloring" << std::endl;
+	gray= pData->GetValue(i);
+	lut->GetColor(gray, rgb);
 	for (size_t j = 0; j < 3; ++j){
 	    ucrgb[j] = static_cast<unsigned char>(rgb[j] * 255);
 	    }
 	colorData->InsertNextTuple3(ucrgb[0], ucrgb[1], ucrgb[2]);
+
+	std::cerr << "(";
+	PrintColour<double[3]>(rgb);
+	std::cerr << ") (";
+	PrintColour<unsigned char[3]>(ucrgb);
+	std::cerr << ")" << std::endl;
 	}
     
     filter->GetOutput()->GetPointData()->SetScalars(colorData);
