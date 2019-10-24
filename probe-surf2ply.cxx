@@ -1,5 +1,7 @@
 // program to apply vtkProbeFilter and to save result as PLY which supports colors, does not need scene and can be imported into blender
 //01: based on probe-surf2x3d.cxx
+// https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/
+// https://lorensen.github.io/VTKExamples/site/Cxx/Visualization/AssignCellColorsFromLUT/
 
 
 
@@ -10,32 +12,16 @@
 #include <vtkXMLPolyDataReader.h>
 #include <vtkProbeFilter.h>
 #include <vtkColorTransferFunction.h>
-#include <vtkPolyDataMapper.h>//as input is definitly vtkPolyData othersiwe use vtkDataSetMapper
+#include <vtkUnsignedCharArray.h>
+#include <vtkPolyData.h>
+#include <vtkDoubleArray.h>
 #include <vtkImageData.h>//reader1->GetOutput()
-#include <vtkPointData.h>//reader1->GetOutput()->GetPointData()
-#include <vtkActor.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
+#include <vtkPointData.h>
 #include <vtkPLYWriter.h>
 
 #include <vtkCallbackCommand.h>
 #include <vtkCommand.h>
 
-
-//// Create the cell data using the colors from a LUT: https://lorensen.github.io/VTKExamples/site/Cxx/Visualization/AssignCellColorsFromLUT/
-void MakeCellData(size_t const& tableSize, vtkLookupTable* lut, vtkUnsignedCharArray* colors){
-    for (size_t i = 1; i < tableSize; i++){
-	double rgb[3];
-	unsigned char ucrgb[3];
-
-	lut->GetColor(static_cast<double>(i) / (tableSize - 1), rgb);
-	for (size_t j = 0; j < 3; ++j){
-	    ucrgb[j] = static_cast<unsigned char>(rgb[j] * 255);
-	    }
-	colors->InsertNextTuple3(ucrgb[0], ucrgb[1], ucrgb[2]);
-	}
-    }
 
 void FilterEventHandlerVTK(vtkObject* caller, long unsigned int eventId, void* clientData, void* callData){
 
@@ -118,12 +104,30 @@ int main (int argc, char *argv[]){
     vtkSmartPointer<vtkUnsignedCharArray> colorData= vtkSmartPointer<vtkUnsignedCharArray>::New();
     colorData->SetName("Colors"); // naming possibly essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
     colorData->SetNumberOfComponents(3);
-    MakeCellData(tableSize, lut, colorData);
+
+    for (vtkIdType i= 0; i < filter->GetOutput()->GetNumberOfPoints(); i++){
+	double rgb[3];
+	unsigned char ucrgb[3];
+	
+	lut->GetColor(
+	    vtkDoubleArray::SafeDownCast(
+		filter->GetOutput()->GetPointData()->GetArray(
+		    reader1->GetOutput()->GetPointData()->GetArrayName(0)
+		    )
+		)->GetValue(i), rgb);
+	for (size_t j = 0; j < 3; ++j){
+	    ucrgb[j] = static_cast<unsigned char>(rgb[j] * 255);
+	    }
+	colorData->InsertNextTuple3(ucrgb[0], ucrgb[1], ucrgb[2]);
+	}
+    
+    filter->GetOutput()->GetPointData()->SetScalars(colorData);
 
     vtkSmartPointer<vtkPLYWriter> writer= vtkSmartPointer<vtkPLYWriter>::New();
-    writer->SetInput(renderWindow);
+    writer->SetInputData(filter->GetOutput());
     writer->SetFileName(argv[3]);
     writer->SetArrayName("Colors"); // essential: https://lorensen.github.io/VTKExamples/site/Cxx/IO/WritePLY/#description
+    writer->EnableAlphaOff();
     writer->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
     std::cerr << "PLY export... ";
     writer->Write();
