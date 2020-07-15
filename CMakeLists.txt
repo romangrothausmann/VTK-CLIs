@@ -93,7 +93,7 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 # SET(CurrentExe "discrete_marching-cubes_DEPRECATED")
 # ADD_EXECUTABLE(${CurrentExe}
-#   ${CurrentExe} "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.cxx")
+#   ${CurrentExe})
 # TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 # install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
@@ -106,7 +106,7 @@ install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 # SET(CurrentExe "discrete_marching-cubes_MPI")
 # if(TARGET vtkFiltersParallelMPI)
 # ADD_EXECUTABLE(${CurrentExe}
-#   ${CurrentExe} "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.cxx")
+#   ${CurrentExe})
 # TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 # install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 # ELSE()
@@ -313,8 +313,7 @@ TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 
 SET(CurrentExe "mc_discrete")
-ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe}
-  ${CurrentExe} "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.cxx")
+ADD_EXECUTABLE(${CurrentExe}  ${CurrentExe})
 TARGET_LINK_LIBRARIES(${CurrentExe} ${Libraries})
 install (TARGETS ${CurrentExe} RUNTIME DESTINATION bin)
 

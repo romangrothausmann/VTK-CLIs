@@ -7,7 +7,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkImageReader2Factory.h>
 #include <vtkImageReader2.h>
-#include "filters_mod/VTK/Filters/General/vtkDiscreteMarchingCubes.h"
+#include <vtkDiscreteMarchingCubes.h>
 #include <vtkInformation.h>//for GetOutputInformation
 #include <vtkStreamingDemandDrivenPipeline.h>//for extent
 #include <vtkImageConstantPad.h>
@@ -93,7 +93,7 @@ int main (int argc, char *argv[]){
 
     VTK_CREATE(vtkDiscreteMarchingCubes, filter);
     filter->GenerateValues(endLabel - startLabel + 1, startLabel, endLabel);
-    filter->ComputeNeighboursOn(); // expecting own extension to vtkDiscreteMarchingCubes
+    filter->ComputeAdjacentScalarsOn(); // available since VTK-7.1.0.rc1 (7573cda4, MR !889)
     filter->AddObserver(vtkCommand::AnyEvent, eventCallbackVTK);
 
     VTK_CREATE(vtkImageConstantPad, pad);
